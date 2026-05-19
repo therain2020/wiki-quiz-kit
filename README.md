@@ -2,17 +2,50 @@
 
 [中文](README.zh-CN.md)
 
-Treats your notes like a software project: raw source files, compiler passes, build outputs, CI checks, and automated testing. Based on Karpathy's LLM Wiki pattern. Three Claude Code slash commands drive everything. `/ingest` pulls knowledge in, `/review` quizzes you on it, `/lint` audits the wiki for semantic issues.
+A personal knowledge system that treats your notes like code. You capture raw material, an LLM compiles it into structured wiki pages and quiz questions, and a health-check script keeps everything consistent. You browse and edit in Obsidian. You drive the whole thing through Claude Code slash commands.
 
-## What it does
+It needs three things to work: an AI agent that can read files and run prompts (Claude Code, Codex CLI, or similar), an LLM API key, and Obsidian.
 
-**`/ingest`** takes a URL (video or article), extracts the content, and runs a two-step chain-of-thought pipeline: first the LLM analyzes entities, concepts, arguments, and connections to existing wiki pages, then it generates structured notes from that analysis. 9 LLM prompt templates handle different source types. One confirmation point, everything else automatic. For videos, it prefers transcripts (YouTube auto-captions) over descriptions. After each run, it appends to `wiki/log.md` and regenerates `wiki/overview.md`.
+## What you need
 
-**`/review`** picks questions from your question bank, reads `wiki/purpose.md` for priority context, renders an HTML quiz, and tracks your answers. After you finish, it copies the session results to your clipboard. Paste them into Claude, and your per-question stats (attempts, correct, wrong) get updated. Next time you ask for a quiz, it weighs new questions, weak topics, and past mistakes differently. Session results are logged to `wiki/log.md`.
+This is not a standalone app or a library you install with pip. It is a **project template** for an LLM-powered knowledge workflow. To use it:
 
-**`/lint`** does what `health-check.ps1` cannot: LLM-powered semantic audit. It reads purpose.md, samples wiki pages, and checks for contradictions, stale claims, missing concepts, orphan clusters, and duplicate content. Results are written to `wiki/lint-{date}.md` and logged.
+- **An AI coding agent.** Claude Code, Codex CLI, or anything that reads files, runs LLM prompts from templates, and writes output files. The three slash commands (`/ingest`, `/review`, `/lint`) are Claude Code skills that ship in this repo.
+- **An LLM API key.** Any provider works — DeepSeek, Claude API, OpenAI, etc. The prompt templates are model-agnostic. Set your key the way your agent expects (Claude Code uses `ANTHROPIC_API_KEY` or your configured provider).
+- **Obsidian.** Open this folder as an Obsidian Vault. That is your IDE for browsing, editing, and linking notes. The frontmatter schemas and wikilinks are Obsidian-native. Any Markdown editor works, but Obsidian's linking and graph view are the point.
+- **Python 3 (Mac/Linux) or PowerShell (Windows).** The health check ships in two versions. Mac and Linux use `health-check.py` (Python 3, pre-installed on macOS). Windows uses `health-check.ps1` (PowerShell, built in).
 
-The quiz has five selection modes:
+## Quick start
+
+**Windows:**
+```powershell
+git clone https://github.com/therain2020/wiki-quiz-kit.git my-kb
+cd my-kb
+.\setup.ps1
+```
+
+**Mac / Linux:**
+```bash
+git clone https://github.com/therain2020/wiki-quiz-kit.git my-kb
+cd my-kb
+bash setup.sh
+```
+
+The setup script creates the directory structure, drops a welcome note in `raw/inbox/`, and runs a health check.
+
+Open the folder in Obsidian as a Vault. In Claude Code (or your agent), run:
+
+```
+/ingest https://youtu.be/vz3Z2XETpGM
+```
+
+This pulls in a YouTube video, extracts the transcript, runs a two-step chain-of-thought analysis, generates structured notes, and writes quiz questions. One confirmation, everything else automatic. When it finishes, try `/review` to quiz yourself on what you just learned.
+
+## What the slash commands do
+
+**`/ingest <url>`** — takes a URL (video, article), extracts content, and runs a two-step CoT pipeline. First the LLM analyzes entities, concepts, arguments, and connections to existing notes. Then it generates: a literature note, atomic permanent notes (one idea each), quiz questions, and an updated topic MOC. For videos, it prioritizes transcripts over descriptions. Appends to `wiki/log.md`, regenerates `wiki/overview.md`.
+
+**`/review`** — reads `questions/bank.json` (one file, fast), picks questions based on your history, and renders an interactive HTML quiz. Five selection modes:
 
 | Mode | What it picks |
 |------|---------------|
@@ -22,12 +55,16 @@ The quiz has five selection modes:
 | consolidate | attempted but accuracy below 80% |
 | random | anything |
 
+After the quiz, results copy to your clipboard. Paste them back to Claude, and your per-question stats update. The next quiz weights new questions, weak topics, and past mistakes differently.
+
+**`/lint`** — LLM-driven semantic audit. Reads `wiki/purpose.md`, samples pages across topics, checks for contradictions, stale claims, missing concepts, orphan clusters, and duplicate content. Writes findings to `wiki/lint-{date}.md`. This does what deterministic health checks cannot.
+
 ## Architecture
 
 ```
 raw/ (source)  ──→  prompts/ (9 compiler passes, two-step CoT)  ──→  wiki/ (output)
                               ↑
-                         Claude Code
+                    Your AI agent (Claude Code)
 
 questions/  ──→  .claude/skills/review/  ──→  output/ (quiz HTML)
     ↑                                              │
@@ -41,115 +78,70 @@ wiki/purpose.md    ──→ read by all LLM operations
 wiki/overview.md   ←── regenerated after each /ingest
 ```
 
-Knowledge moves in one direction through the pipeline: URL → raw → wiki → permanent notes → questions → quiz. The quiz results loop back through sessions into state, which feeds into the next quiz selection. Every wiki page records contributing sources in `sources: []`.
+Knowledge flows one way: URL → raw → wiki → permanent notes → questions → quiz. Quiz results loop back through sessions into state, which feeds the next quiz selection.
 
-## Two-layer quality assurance
+## Quality assurance
 
-**Tier 1 -- deterministic.** `health-check.ps1` runs 8 checks against your vault, all pure rules, zero LLM cost:
+**Tier 1 — deterministic.** `health-check.ps1` (Windows) or `health-check.py` (Mac/Linux) runs 8 checks, no LLM calls:
 
 1. Broken wiki-links
-2. Orphan notes (permanent notes with no incoming links, older than 24h)
-3. Empty files (frontmatter only, no body)
+2. Orphan notes (no incoming links, older than 24h)
+3. Empty files
 4. Frontmatter consistency (required fields per note type)
-5. Symmetric links (A links to B but B does not link back, `-Strict` only)
-6. Question bank integrity (format validation, per-topic counts, source link checks, INDEX consistency)
-7. State integrity (session vs state drift detection, cross-link validation)
-8. Log integrity (format validation, chronological order)
+5. Symmetric links (`-Strict` only)
+6. Question bank integrity (format, INDEX consistency, bank.json sync)
+7. State integrity (session vs state drift)
+8. Log integrity (format, chronological order)
 
-**Tier 2 -- LLM-driven.** `/lint` reads `wiki/purpose.md`, samples pages across topics, and checks for contradictions, stale claims, missing concepts, orphan clusters, and duplicates. On-demand, token cost applies.
+**Tier 2 — LLM-driven.** `/lint` checks for contradictions, stale claims, missing concepts, orphan clusters, and duplicates. Token cost applies, run it when you want a deeper look.
 
-All scripts support `-Json` output with a documented JSON Schema, so agents and MCP servers can consume results directly.
+## Scripts
 
-## How it maps to software engineering
+**Health check (cross-platform):**
 
-| Software | Knowledge |
-|----------|-----------|
-| `src/` | `raw/` -- unprocessed capture |
-| `build/` | `wiki/` -- structured output |
-| compiler | LLM + `prompts/` templates |
-| IDE | Obsidian |
-| CI/lint | `health-check.ps1` (Tier 1) + `/lint` (Tier 2) |
-| incremental build | `compile.ps1` -- change detection + quiz dependency scan |
-
-## Data directories
-
-| Directory | Purpose | Git |
-|-----------|---------|-----|
-| `raw/` | Source materials, never deleted | tracked |
-| `wiki/` | Structured notes + `log.md`, `purpose.md`, `overview.md` | tracked |
-| `questions/` | Quiz questions with frontmatter | tracked |
-| `state/` | Per-question attempt stats (derived from sessions) | ignored |
-| `sessions/` | Raw quiz answer logs, append-only WAL | ignored |
-| `temp/` | Intermediate outputs, analysis drafts | ignored |
-| `output/` | Generated quiz HTML | ignored |
-| `prompts/` | 9 LLM compiler prompt templates | tracked |
-| `templates/` | 7 Obsidian note templates | tracked |
-| `scripts/` | PowerShell tooling | tracked |
-| `evals/` | Golden test cases | tracked |
-
-## Question format
-
-Each question is a `.md` file with YAML frontmatter:
-
-```yaml
-type: question
-id: fde-kpi-is-contract-growth-1
-topic: FDE
-difficulty: medium
-sources: [fde-kpi-is-contract-growth-not-cost-reduction]
-deprecated: false
-created: "2026-05-19"
+```bash
+# Mac / Linux
+python3 scripts/health-check.py --verbose
+python3 scripts/health-check.py --strict
+python3 scripts/health-check.py --json
 ```
-
-The body uses a fixed format that `/review` and `health-check.ps1` both parse:
-
-```markdown
-# What is the core KPI of the FDE strategy?
-
-A. Lower customization costs
-B. Contract revenue growth
-C. Increase user activity
-D. Reduce marginal costs
-
-**答案:** B
-
-**解析:** FDE measures success by contract revenue growth, not cost reduction.
-```
-
-Question state (attempts, correct, wrong) lives in `state/{id}.json`, not in the question file. When a question's source note changes, the old question gets `deprecated: true` and a new one is generated. The old stats stay.
-
-## Quick start
 
 ```powershell
-git clone https://github.com/therain2020/wiki-quiz-kit.git my-kb
-cd my-kb
-.\setup.ps1
-```
-
-Open the folder in Obsidian as a Vault. Drop thoughts into `raw/inbox/`, use `/ingest <URL>` to pull in articles and videos, use `/review` to quiz yourself, use `/lint` for a semantic audit.
-
-## Scripts and commands
-
-```powershell
-# Health checks (8 deterministic checks, no LLM)
+# Windows
 .\scripts\health-check.ps1 -Verbose
 .\scripts\health-check.ps1 -Strict
 .\scripts\health-check.ps1 -Json
+```
 
-# Compile (incremental + quiz dependency detection)
+**Compile and eval (Windows, or install PowerShell Core on Mac):**
+
+```powershell
+# Incremental compilation + quiz dependency detection
 .\scripts\compile.ps1
 .\scripts\compile.ps1 -Full
 .\scripts\compile.ps1 -WhatIf
 
-# Eval gates
-.\scripts\eval.ps1 -Verbose        # deterministic: frontmatter, body, links, state-update
-.\scripts\eval-llm.ps1 -Verbose    # LLM-driven: question generation structure compliance
-
-# Claude Code slash commands
-/ingest <URL>      # one-click knowledge ingestion (two-step CoT)
-/review             # smart quiz with state tracking
-/lint               # LLM semantic wiki audit
+# Eval
+.\scripts\eval.ps1 -Verbose
+.\scripts\eval-llm.ps1 -Verbose
 ```
+
+## Directory map
+
+| Directory | Purpose | Git |
+|-----------|---------|-----|
+| `raw/` | Source materials | ignored |
+| `wiki/` | Structured notes, log, purpose, overview | ignored |
+| `questions/` | Quiz bank (`bank.json` + `.md` files) | ignored |
+| `state/` | Per-question stats (derived from sessions) | ignored |
+| `sessions/` | Quiz answer log, append-only | ignored |
+| `temp/` | Intermediate outputs | ignored |
+| `output/` | Generated quiz HTML | ignored |
+| `prompts/` | 9 LLM prompt templates | tracked |
+| `scripts/` | PowerShell + Python tooling (cross-platform) | tracked |
+| `.claude/skills/` | Claude Code slash command definitions | tracked |
+
+Knowledge and quiz data are gitignored by default. If you want to sync across devices, unignore `raw/`, `wiki/`, and `questions/` in `.gitignore` — but use a private repo.
 
 ## License
 

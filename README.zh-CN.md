@@ -2,17 +2,50 @@
 
 [English](README.md)
 
-把你的笔记当成软件项目来管理：原始源文件、编译器通道、构建产物、CI 检查、自动化测试。基于 Karpathy 的 LLM Wiki 方法论。三个 Claude Code 斜杠命令驱动一切。`/ingest` 把知识拉进来，`/review` 考你记住了多少，`/lint` 做语义审计。
+把笔记当成代码管——你捕获原始材料，LLM 把它们编译成结构化 wiki 页面和测验题，健康检查脚本保证一切不乱。你用 Obsidian 浏览和编辑，用 Claude Code 的斜杠命令驱动整个流程。
 
-## 能做什么
+这东西要跑起来需要三样：一个能读文件、跑 prompt 的 AI agent（Claude Code 或类似的），一个 LLM API key，还有 Obsidian。
 
-**`/ingest`** 接收一个 URL（视频或文章），提取内容，走两步思维链管道：LLM 先分析实体、概念、论证以及与现有 wiki 的连接点，再基于分析结果生成结构化笔记。9 个 LLM prompt 模板处理不同源类型。全程只有一个确认点，其余自动完成。处理视频时优先用转录文稿（YouTube 自动字幕）。每次运行后追加 `wiki/log.md`，重新生成 `wiki/overview.md`。
+## 你需要什么
 
-**`/review`** 从题库选题，先读 `wiki/purpose.md` 了解优先级，渲染 HTML 测验页面，记录答案。做完后自动把答题结果复制到剪贴板，粘贴给 Claude 就行，它会更新每道题的状态（做过几次、对了几次、错了几次）。下次出题时，新题、薄弱点和错题的权重都不一样。答题结果记入 `wiki/log.md`。
+这不是一个独立应用，也不是 pip install 就能用的库。它是一个**项目模板**，给 LLM 驱动的知识工作流用的。你需要：
 
-**`/lint`** 做 `health-check.ps1` 做不到的事：LLM 驱动的语义审计。读 purpose.md，采样 wiki 页面，检查矛盾、过时声明、缺失概念、孤立群组和重复内容。结果写入 `wiki/lint-{date}.md` 并记入日志。
+- **一个 AI coding agent。** Claude Code、Codex CLI，任何能读文件、按模板调 LLM、写输出文件的 agent 都行。项目里的三个斜杠命令（`/ingest`、`/review`、`/lint`）就是 Claude Code 的 skill，代码在 `.claude/skills/` 里。
+- **一个 LLM API key。** 随便哪个 provider——DeepSeek、Claude API、OpenAI 都行。prompt 模板跟模型无关。按你 agent 要求的方式配好 key 就行（Claude Code 用 `ANTHROPIC_API_KEY` 或者你配的 provider）。
+- **Obsidian。** 把项目文件夹当成 Obsidian Vault 打开。它是你浏览、编辑、链接笔记的 IDE。frontmatter schema 和 wikilink 都是 Obsidian 原生支持的。用别的 Markdown 编辑器也行，但双向链接和图谱视图才是 Obsidian 的价值。
+- **Python 3（Mac/Linux）或 PowerShell（Windows）。** 健康检查提供两个版本。Mac/Linux 用 `health-check.py`（Python 3，macOS 自带）。Windows 用 `health-check.ps1`（PowerShell，系统自带）。
 
-五种选题模式：
+## 快速开始
+
+**Windows:**
+```powershell
+git clone https://github.com/therain2020/wiki-quiz-kit.git my-kb
+cd my-kb
+.\setup.ps1
+```
+
+**Mac / Linux:**
+```bash
+git clone https://github.com/therain2020/wiki-quiz-kit.git my-kb
+cd my-kb
+bash setup.sh
+```
+
+初始化脚本创建目录结构、在 `raw/inbox/` 放一条欢迎笔记、跑一次健康检查。
+
+用 Obsidian 打开文件夹作为 Vault。在 Claude Code（或者你的 agent）里跑：
+
+```
+/ingest https://youtu.be/vz3Z2XETpGM
+```
+
+这会把一个 YouTube 视频拉进来，提取字幕，跑两步思维链分析，生成结构化笔记和测验题。全程只确认一次，其他自动完成。跑完之后用 `/review` 刷题，检验刚学的东西。
+
+## 三个斜杠命令
+
+**`/ingest <url>`** —— 喂一个 URL（视频或文章），提取内容，走两步 CoT 管道。LLM 先分析实体、概念、论证、跟已有笔记的关联，再生成：一篇文献笔记、若干原子化永久笔记（一个想法一篇）、测验题、更新主题 MOC。处理视频时优先用字幕而非简介。追加 `wiki/log.md`，重新生成 `wiki/overview.md`。
+
+**`/review`** —— 读 `questions/bank.json`（一个文件，速度快），根据你的答题历史选题，渲染交互式 HTML 测验。五种模式：
 
 | 模式 | 规则 |
 |------|------|
@@ -20,14 +53,18 @@
 | 新题 | 只选没做过的 |
 | 错题 | 只选上次答错的 |
 | 巩固 | 做过但正确率不到 80% |
-| 随机 | 完全随机 |
+| 随机 | 随便选 |
+
+做完后答题结果自动复制到剪贴板。贴给 Claude，每道题的状态就更新了。下次出题时，新题、薄弱点、错题的权重都不一样。
+
+**`/lint`** —— LLM 驱动的语义审计。读 `wiki/purpose.md`，跨主题采样笔记，检查矛盾、过时说法、缺失概念、孤立群组和重复内容。结果写入 `wiki/lint-{date}.md`。这是确定性检查做不到的事。
 
 ## 架构
 
 ```
 raw/ (源文件)  ──→  prompts/ (9 个编译器通道，两步 CoT)  ──→  wiki/ (构建产物)
                               ↑
-                         Claude Code
+                     你的 AI agent (Claude Code)
 
 questions/  ──→  .claude/skills/review/  ──→  output/ (测验 HTML)
     ↑                                              │
@@ -41,115 +78,70 @@ wiki/purpose.md    ──→ 所有 LLM 操作读取
 wiki/overview.md   ←── 每次 /ingest 后重新生成
 ```
 
-知识单向流经管道：URL → raw → wiki → permanent notes → questions → quiz。测验结果经 sessions 回流到 state，影响下一次选题。每篇 wiki 页面用 `sources: []` 记录所有贡献源。
+知识单向流动：URL → raw → wiki → permanent notes → questions → quiz。测验结果经 sessions 回流到 state，影响下一次选题。
 
-## 双层质量保障
+## 质量保障
 
-**第一层——确定性检查。** `health-check.ps1` 对知识库跑 8 项检查，纯规则，不调 LLM，零 token 消耗：
+**第一层——确定性检查。** `health-check.ps1`（Windows）或 `health-check.py`（Mac/Linux）跑 8 项，不调 LLM，零 token 消耗：
 
 1. 断链检测
-2. 孤立笔记（无入链且超过 24 小时的 permanent note）
-3. 空文件（只有 frontmatter，无正文）
+2. 孤立笔记（无入链且超 24 小时）
+3. 空文件
 4. frontmatter 一致性（每种笔记类型的必填字段）
-5. 对称链接（A 链 B 但 B 不链 A，仅 `-Strict` 模式）
-6. 题库完整性（格式校验、单主题题数、源链接、INDEX 一致性）
-7. 状态完整性（sessions 与 state 漂移检测、跨链校验）
-8. 日志完整性（格式校验、时间顺序）
+5. 对称链接（`-Strict` 模式）
+6. 题库完整性（格式、INDEX 一致性、bank.json 同步）
+7. 状态完整性（sessions 与 state 漂移检测）
+8. 日志完整性（格式、时间顺序）
 
-**第二层——LLM 驱动。** `/lint` 读 `wiki/purpose.md`，跨主题采样页面，检查矛盾、过时声明、缺失概念、孤立群组和重复内容。按需触发，消耗 token。
+**第二层——LLM 驱动。** `/lint` 检查矛盾、过时说法、缺失概念、孤立群组和重复内容。消耗 token，想深查的时候跑。
 
-所有脚本支持 `-Json` 输出，有完整的 JSON Schema 文档，Agent 和 MCP server 可以直接消费。
+## 脚本
 
-## 软件工程映射
+**健康检查（跨平台）：**
 
-| 软件 | 知识 |
-|------|------|
-| `src/` | `raw/` -- 未加工捕获 |
-| `build/` | `wiki/` -- 结构化输出 |
-| 编译器 | LLM + `prompts/` 模板 |
-| IDE | Obsidian |
-| CI/lint | `health-check.ps1` (Tier 1) + `/lint` (Tier 2) |
-| 增量编译 | `compile.ps1` -- 变更检测 + quiz 依赖扫描 |
-
-## 数据目录
-
-| 目录 | 用途 | Git |
-|------|------|-----|
-| `raw/` | 源材料，永不删除 | tracked |
-| `wiki/` | 结构化笔记 + `log.md`, `purpose.md`, `overview.md` | tracked |
-| `questions/` | 测验题目（含 frontmatter） | tracked |
-| `state/` | 每题答题状态（从 sessions 派生） | ignored |
-| `sessions/` | 原始答题记录，只追加不删除 | ignored |
-| `temp/` | 中间产物、分析草稿 | ignored |
-| `output/` | 生成的测验 HTML | ignored |
-| `prompts/` | 9 个 LLM 编译器 prompt 模板 | tracked |
-| `templates/` | 7 种 Obsidian 笔记模板 | tracked |
-| `scripts/` | PowerShell 工具脚本 | tracked |
-| `evals/` | Golden 测试用例 | tracked |
-
-## 题目格式
-
-每道题是一个 `.md` 文件，带 YAML frontmatter：
-
-```yaml
-type: question
-id: fde-kpi-is-contract-growth-1
-topic: FDE
-difficulty: medium
-sources: [fde-kpi-is-contract-growth-not-cost-reduction]
-deprecated: false
-created: "2026-05-19"
+```bash
+# Mac / Linux
+python3 scripts/health-check.py --verbose
+python3 scripts/health-check.py --strict
+python3 scripts/health-check.py --json
 ```
-
-正文使用固定格式，`/review` 和 `health-check.ps1` 都能解析：
-
-```markdown
-# FDE 战略的核心 KPI 是什么？
-
-A. 降低定制成本
-B. 保持合同规模增长
-C. 提高用户活跃度
-D. 降低边际成本
-
-**答案:** B
-
-**解析:** FDE 战略与 SaaS PMF 的度量逻辑相反，FDE 阶段的核心度量是合同规模增长而非成本降低。
-```
-
-题目状态（attempts, correct, wrong）存放在 `state/{id}.json`，不在题目文件里。题目的源笔记更新后，旧题标记 `deprecated: true`，系统生成新题，旧题的答题记录全部保留。
-
-## 快速开始
 
 ```powershell
-git clone https://github.com/therain2020/wiki-quiz-kit.git my-kb
-cd my-kb
-.\setup.ps1
-```
-
-用 Obsidian 打开文件夹作为 Vault。往 `raw/inbox/` 扔想法，用 `/ingest <URL>` 摄入文章和视频，用 `/review` 刷题复习，用 `/lint` 做语义审计。
-
-## 脚本和命令
-
-```powershell
-# 健康检查（8 项确定性检查，不调 LLM）
+# Windows
 .\scripts\health-check.ps1 -Verbose
 .\scripts\health-check.ps1 -Strict
 .\scripts\health-check.ps1 -Json
+```
 
-# 编译（增量 + quiz 依赖检测）
+**编译和 eval（Windows，Mac 可装 PowerShell Core）：**
+
+```powershell
+# 增量编译 + quiz 依赖检测
 .\scripts\compile.ps1
 .\scripts\compile.ps1 -Full
 .\scripts\compile.ps1 -WhatIf
 
-# Eval 门禁
-.\scripts\eval.ps1 -Verbose        # 确定性：frontmatter, body, links, state-update
-.\scripts\eval-llm.ps1 -Verbose    # LLM 驱动：出题结构合规性
-
-# Claude Code 斜杠命令
-/ingest <URL>      # 一键知识摄入（两步 CoT）
-/review             # 智能测验 + 状态追踪
-/lint               # LLM 语义 wiki 审计
+# Eval
+.\scripts\eval.ps1 -Verbose
+.\scripts\eval-llm.ps1 -Verbose
 ```
+
+## 目录结构
+
+| 目录 | 用途 | Git |
+|------|------|-----|
+| `raw/` | 源材料 | ignored |
+| `wiki/` | 结构化笔记、log、purpose、overview | ignored |
+| `questions/` | 题库（`bank.json` + `.md` 文件） | ignored |
+| `state/` | 每题答题状态（从 sessions 派生） | ignored |
+| `sessions/` | 答题记录，只追加 | ignored |
+| `temp/` | 中间产物 | ignored |
+| `output/` | 生成的测验 HTML | ignored |
+| `prompts/` | 9 个 LLM prompt 模板 | tracked |
+| `scripts/` | PowerShell 工具脚本 | tracked |
+| `.claude/skills/` | Claude Code 斜杠命令定义 | tracked |
+
+知识和题库默认 gitignore。想跨设备同步的话，在 `.gitignore` 里取消 `raw/`、`wiki/`、`questions/` 的忽略——但记得用**私人仓库**。
 
 ## License
 

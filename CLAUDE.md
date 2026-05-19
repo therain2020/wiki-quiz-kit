@@ -240,7 +240,7 @@ When the user says "复习", "出题", "quiz", or "review":
 
 ### 3. Health Check (Tier 1 — deterministic)
 When the user says "health check" or "check my vault":
-1. Run `.\scripts\health-check.ps1 -Verbose` (8 checks including log integrity)
+1. Run `.\scripts\health-check.ps1 -Verbose` (Windows) or `python3 scripts/health-check.py --verbose` (Mac/Linux) — 8 checks including log integrity
 2. Interpret the results in plain language
 3. For each error, explain what's broken and suggest the fix
 4. For orphans, suggest potential connection points
@@ -325,7 +325,8 @@ When the user shares a video link (Douyin, YouTube, B站, etc.), follow this pri
 | `wiki/purpose.md` | Wiki directional intent |
 | `wiki/overview.md` | Auto-generated global summary |
 | `questions/bank.json` | Single-file question bank for fast `/review` loading |
-| `scripts/health-check.ps1` | Vault integrity auditor (8 checks + bank.json consistency) |
+| `scripts/health-check.ps1` | Vault integrity auditor (8 checks + bank.json consistency), **Windows** |
+| `scripts/health-check.py` | Vault integrity auditor, **Mac/Linux** (Python 3, cross-platform) |
 | `scripts/compile.ps1` | Incremental compilation driver + quiz dependency detection |
 | `scripts/eval.ps1` | Deterministic eval runner |
 | `scripts/eval-llm.ps1` | LLM-driven question generation eval |
