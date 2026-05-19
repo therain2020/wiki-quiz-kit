@@ -1,5 +1,7 @@
 # wiki-quiz-kit
 
+[中文](README.zh-CN.md)
+
 Treats your notes like a software project: raw source files, compiler passes, build outputs, CI checks, and automated testing. Two Claude Code slash commands drive everything. `/ingest` pulls knowledge in, `/review` quizzes you on it.
 
 ## What it does

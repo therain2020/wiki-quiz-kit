@@ -1,5 +1,7 @@
 # wiki-quiz-kit
 
+[English](README.md)
+
 把你的笔记当成软件项目来管理：原始源文件、编译器通道、构建产物、CI 检查、自动化测试。两个 Claude Code 斜杠命令驱动一切。`/ingest` 把知识拉进来，`/review` 考你记住了多少。
 
 ## 能做什么
