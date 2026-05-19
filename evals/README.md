@@ -23,7 +23,7 @@ evals/
 2. Copy raw → `evals/cases/<case-name>/source.md`
 3. Copy verified wiki output → `evals/cases/<case-name>/expected.md`
 4. Create `meta.json` with `expectedType` and `expectFail`
-5. Run `.\scripts\eval.ps1 -Verbose`
+5. Run `python3 scripts/eval.py --verbose`
 
 ## Checks
 
@@ -39,4 +39,4 @@ evals/
 compile → eval → fail → fix → re-compile → pass
 ```
 
-eval.ps1 exits non-zero on failure. compile.ps1 -Process mode triggers eval gate.
+eval.py exits non-zero on failure. compile.py --process mode triggers eval gate.

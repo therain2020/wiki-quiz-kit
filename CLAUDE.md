@@ -22,8 +22,8 @@ This is a personal knowledge management system that treats knowledge work like a
 | `build/` | `wiki/` | Structured knowledge output |
 | Compiler | LLM + prompts/ | raw → wiki transformation |
 | IDE | Obsidian | Edit, view, navigate, link |
-| Lint/CI | health-check.ps1 | Link validity, consistency |
-| Incremental compile | compile.ps1 | Change detection, only process deltas |
+| Lint/CI | health-check.py | Link validity, consistency |
+| Incremental compile | compile.py | Change detection, only process deltas |
 
 ## Architecture
 
@@ -47,27 +47,25 @@ wiki/overview.md (总览) ←── /ingest, /review maintain
 - **raw/:** Capture-first. Everything lands in `raw/inbox/`, gets triaged to subfolders.
 - **wiki/:** Structured output. `permanent/` = atomic evergreen notes, `literature/` = reading notes, `daily/` = journal, `moc/` = Maps of Content.
 - **prompts/:** LLM prompt templates for each compilation pass. Claude reads the source file, reads the prompt, then generates the output.
-- **scripts/:** `health-check.ps1` audits vault integrity; `compile.ps1` detects changed files.
+- **scripts/:** `health-check.py` audits vault integrity; `compile.py` detects changed files. All Python 3, cross-platform.
 
 ## Common Commands
 
-```powershell
-# Health check (8 checks: broken links, orphans, empty files, frontmatter, symmetric links, question bank, state integrity, log integrity)
-.\scripts\health-check.ps1
-.\scripts\health-check.ps1 -Strict     # include symmetric link check
-.\scripts\health-check.ps1 -Verbose    # show per-issue details
-.\scripts\health-check.ps1 -Json       # JSON output for programmatic use
+```bash
+# Python 3 — cross-platform (Windows, Mac, Linux)
+python3 scripts/health-check.py              # summary only
+python3 scripts/health-check.py --strict     # include symmetric link check
+python3 scripts/health-check.py --verbose    # show per-issue details
+python3 scripts/health-check.py --json       # JSON output for programmatic use
 
-# Compile (detect changed raw/ files + quiz dependencies)
-.\scripts\compile.ps1                  # incremental scan
-.\scripts\compile.ps1 -Full            # treat all files as changed
-.\scripts\compile.ps1 -WhatIf          # dry run — show what would happen
-.\scripts\compile.ps1 -Interactive     # step through each file
-.\scripts\compile.ps1 -Json            # JSON output (includes quizAffected)
+python3 scripts/compile.py                   # incremental scan
+python3 scripts/compile.py --full            # treat all files as changed
+python3 scripts/compile.py --what-if         # dry run — show what would happen
+python3 scripts/compile.py --interactive     # step through each file
+python3 scripts/compile.py --json            # JSON output (includes quizAffected)
 
-# Eval (LLM-driven question generation validation)
-.\scripts\eval-llm.ps1 -Verbose        # validate generated questions against constraints
-.\scripts\eval-llm.ps1 -Output path    # specify output file to check
+python3 scripts/eval-llm.py --verbose        # validate generated questions
+python3 scripts/eval-llm.py --output path    # specify output file to check
 ```
 
 ## Folder Reference
@@ -91,7 +89,7 @@ wiki/overview.md (总览) ←── /ingest, /review maintain
 | `output/` | Generated quiz HTML — local only, gitignored |
 | `templates/` | Obsidian note templates (used by core Templates plugin) |
 | `prompts/` | LLM compiler prompt templates (9 passes: 7 raw→wiki + ingest-analysis + generate-questions) |
-| `scripts/` | PowerShell tooling |
+| `scripts/` | Python tooling (cross-platform) |
 | `wiki/log.md` | Chronological operations log (ingest, review, lint entries) |
 | `wiki/purpose.md` | Directional intent — goals, key questions, scope, thesis |
 | `wiki/overview.md` | Auto-generated global summary (scale, topic coverage, gaps) |
@@ -240,7 +238,7 @@ When the user says "复习", "出题", "quiz", or "review":
 
 ### 3. Health Check (Tier 1 — deterministic)
 When the user says "health check" or "check my vault":
-1. Run `.\scripts\health-check.ps1 -Verbose` (Windows) or `python3 scripts/health-check.py --verbose` (Mac/Linux) — 8 checks including log integrity
+1. Run `python3 scripts/health-check.py --verbose` — 8 checks including log integrity
 2. Interpret the results in plain language
 3. For each error, explain what's broken and suggest the fix
 4. For orphans, suggest potential connection points
@@ -325,11 +323,10 @@ When the user shares a video link (Douyin, YouTube, B站, etc.), follow this pri
 | `wiki/purpose.md` | Wiki directional intent |
 | `wiki/overview.md` | Auto-generated global summary |
 | `questions/bank.json` | Single-file question bank for fast `/review` loading |
-| `scripts/health-check.ps1` | Vault integrity auditor (8 checks + bank.json consistency), **Windows** |
-| `scripts/health-check.py` | Vault integrity auditor, **Mac/Linux** (Python 3, cross-platform) |
-| `scripts/compile.ps1` | Incremental compilation driver + quiz dependency detection |
-| `scripts/eval.ps1` | Deterministic eval runner |
-| `scripts/eval-llm.ps1` | LLM-driven question generation eval |
+| `scripts/health-check.py` | Vault integrity auditor, cross-platform (Python 3) |
+| `scripts/compile.py` | Incremental compilation + quiz dependency, cross-platform |
+| `scripts/eval.py` | Deterministic eval runner, cross-platform |
+| `scripts/eval-llm.py` | LLM-driven q-gen validation, cross-platform |
 | `.claude/skills/ingest/SKILL.md` | Knowledge ingestion pipeline (two-step CoT) |
 | `.claude/skills/review/SKILL.md` | Interactive quiz generator |
 | `.claude/skills/lint/SKILL.md` | LLM semantic wiki audit |

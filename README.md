@@ -4,34 +4,24 @@
 
 A personal knowledge system that treats your notes like code. You capture raw material, an LLM compiles it into structured wiki pages and quiz questions, and a health-check script keeps everything consistent. You browse and edit in Obsidian. You drive the whole thing through Claude Code slash commands.
 
-It needs three things to work: an AI agent that can read files and run prompts (Claude Code, Codex CLI, or similar), an LLM API key, and Obsidian.
-
 ## What you need
 
 This is not a standalone app or a library you install with pip. It is a **project template** for an LLM-powered knowledge workflow. To use it:
 
 - **An AI coding agent.** Claude Code, Codex CLI, or anything that reads files, runs LLM prompts from templates, and writes output files. The three slash commands (`/ingest`, `/review`, `/lint`) are Claude Code skills that ship in this repo.
-- **An LLM API key.** Any provider works — DeepSeek, Claude API, OpenAI, etc. The prompt templates are model-agnostic. Set your key the way your agent expects (Claude Code uses `ANTHROPIC_API_KEY` or your configured provider).
-- **Obsidian.** Open this folder as an Obsidian Vault. That is your IDE for browsing, editing, and linking notes. The frontmatter schemas and wikilinks are Obsidian-native. Any Markdown editor works, but Obsidian's linking and graph view are the point.
-- **Python 3 (Mac/Linux) or PowerShell (Windows).** The health check ships in two versions. Mac and Linux use `health-check.py` (Python 3, pre-installed on macOS). Windows uses `health-check.ps1` (PowerShell, built in).
+- **An LLM API key.** Any provider works — DeepSeek, Claude API, OpenAI, etc. The prompt templates are model-agnostic. Set your key the way your agent expects.
+- **Obsidian.** Open this folder as an Obsidian Vault. That is your IDE for browsing, editing, and linking notes. The frontmatter schemas and wikilinks are Obsidian-native.
+- **Python 3.** All tooling scripts run on Python 3 (macOS has it, Windows needs `winget install python3`).
 
 ## Quick start
 
-**Windows:**
-```powershell
-git clone https://github.com/therain2020/wiki-quiz-kit.git my-kb
-cd my-kb
-.\setup.ps1
-```
-
-**Mac / Linux:**
 ```bash
 git clone https://github.com/therain2020/wiki-quiz-kit.git my-kb
 cd my-kb
 bash setup.sh
 ```
 
-The setup script creates the directory structure, drops a welcome note in `raw/inbox/`, and runs a health check.
+`setup.sh` checks for Python, hands off to `setup.py` which creates the directory structure, writes a welcome note, and runs a health check.
 
 Open the folder in Obsidian as a Vault. In Claude Code (or your agent), run:
 
@@ -82,13 +72,13 @@ Knowledge flows one way: URL → raw → wiki → permanent notes → questions 
 
 ## Quality assurance
 
-**Tier 1 — deterministic.** `health-check.ps1` (Windows) or `health-check.py` (Mac/Linux) runs 8 checks, no LLM calls:
+**Tier 1 — deterministic.** `health-check.py` runs 8 checks, no LLM calls:
 
 1. Broken wiki-links
 2. Orphan notes (no incoming links, older than 24h)
 3. Empty files
 4. Frontmatter consistency (required fields per note type)
-5. Symmetric links (`-Strict` only)
+5. Symmetric links (`--strict` only)
 6. Question bank integrity (format, INDEX consistency, bank.json sync)
 7. State integrity (session vs state drift)
 8. Log integrity (format, chronological order)
@@ -97,33 +87,20 @@ Knowledge flows one way: URL → raw → wiki → permanent notes → questions 
 
 ## Scripts
 
-**Health check (cross-platform):**
-
 ```bash
-# Mac / Linux
+# Health check
 python3 scripts/health-check.py --verbose
 python3 scripts/health-check.py --strict
 python3 scripts/health-check.py --json
-```
 
-```powershell
-# Windows
-.\scripts\health-check.ps1 -Verbose
-.\scripts\health-check.ps1 -Strict
-.\scripts\health-check.ps1 -Json
-```
-
-**Compile and eval (Windows, or install PowerShell Core on Mac):**
-
-```powershell
-# Incremental compilation + quiz dependency detection
-.\scripts\compile.ps1
-.\scripts\compile.ps1 -Full
-.\scripts\compile.ps1 -WhatIf
+# Compile — incremental change detection + quiz dependency scan
+python3 scripts/compile.py
+python3 scripts/compile.py --full
+python3 scripts/compile.py --what-if
 
 # Eval
-.\scripts\eval.ps1 -Verbose
-.\scripts\eval-llm.ps1 -Verbose
+python3 scripts/eval.py --verbose
+python3 scripts/eval-llm.py --verbose
 ```
 
 ## Directory map
@@ -138,7 +115,7 @@ python3 scripts/health-check.py --json
 | `temp/` | Intermediate outputs | ignored |
 | `output/` | Generated quiz HTML | ignored |
 | `prompts/` | 9 LLM prompt templates | tracked |
-| `scripts/` | PowerShell + Python tooling (cross-platform) | tracked |
+| `scripts/` | Python tooling (cross-platform) | tracked |
 | `.claude/skills/` | Claude Code slash command definitions | tracked |
 
 Knowledge and quiz data are gitignored by default. If you want to sync across devices, unignore `raw/`, `wiki/`, and `questions/` in `.gitignore` — but use a private repo.

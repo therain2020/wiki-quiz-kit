@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/therain2020/knowledge-base/blob/master/scripts/health-check-schema.json",
   "title": "Knowledge Base Health Check Result",
-  "description": "Output schema for health-check.ps1 -Json. MCP-ready: this schema defines a machine-readable contract for AI agents to consume health check results.",
+  "description": "Output schema for health-check.py --json. MCP-ready: this schema defines a machine-readable contract for AI agents to consume health check results.",
   "type": "object",
   "required": ["errors", "warnings", "notes", "details"],
   "properties": {

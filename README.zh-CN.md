@@ -4,34 +4,24 @@
 
 把笔记当成代码管——你捕获原始材料，LLM 把它们编译成结构化 wiki 页面和测验题，健康检查脚本保证一切不乱。你用 Obsidian 浏览和编辑，用 Claude Code 的斜杠命令驱动整个流程。
 
-这东西要跑起来需要三样：一个能读文件、跑 prompt 的 AI agent（Claude Code 或类似的），一个 LLM API key，还有 Obsidian。
-
 ## 你需要什么
 
 这不是一个独立应用，也不是 pip install 就能用的库。它是一个**项目模板**，给 LLM 驱动的知识工作流用的。你需要：
 
 - **一个 AI coding agent。** Claude Code、Codex CLI，任何能读文件、按模板调 LLM、写输出文件的 agent 都行。项目里的三个斜杠命令（`/ingest`、`/review`、`/lint`）就是 Claude Code 的 skill，代码在 `.claude/skills/` 里。
-- **一个 LLM API key。** 随便哪个 provider——DeepSeek、Claude API、OpenAI 都行。prompt 模板跟模型无关。按你 agent 要求的方式配好 key 就行（Claude Code 用 `ANTHROPIC_API_KEY` 或者你配的 provider）。
-- **Obsidian。** 把项目文件夹当成 Obsidian Vault 打开。它是你浏览、编辑、链接笔记的 IDE。frontmatter schema 和 wikilink 都是 Obsidian 原生支持的。用别的 Markdown 编辑器也行，但双向链接和图谱视图才是 Obsidian 的价值。
-- **Python 3（Mac/Linux）或 PowerShell（Windows）。** 健康检查提供两个版本。Mac/Linux 用 `health-check.py`（Python 3，macOS 自带）。Windows 用 `health-check.ps1`（PowerShell，系统自带）。
+- **一个 LLM API key。** 随便哪个 provider——DeepSeek、Claude API、OpenAI 都行。prompt 模板跟模型无关。按你 agent 要求的方式配好 key 就行。
+- **Obsidian。** 把项目文件夹当成 Obsidian Vault 打开。它是你浏览、编辑、链接笔记的 IDE。frontmatter schema 和 wikilink 都是 Obsidian 原生支持的。
+- **Python 3。** 所有工具脚本都是 Python 3 写的。macOS 自带，Windows 上 `winget install python3` 一行搞定。
 
 ## 快速开始
 
-**Windows:**
-```powershell
-git clone https://github.com/therain2020/wiki-quiz-kit.git my-kb
-cd my-kb
-.\setup.ps1
-```
-
-**Mac / Linux:**
 ```bash
 git clone https://github.com/therain2020/wiki-quiz-kit.git my-kb
 cd my-kb
 bash setup.sh
 ```
 
-初始化脚本创建目录结构、在 `raw/inbox/` 放一条欢迎笔记、跑一次健康检查。
+`setup.sh` 检查 Python 是否就绪，然后交给 `setup.py`——创建目录结构、写欢迎笔记、跑一次健康检查。
 
 用 Obsidian 打开文件夹作为 Vault。在 Claude Code（或者你的 agent）里跑：
 
@@ -82,13 +72,13 @@ wiki/overview.md   ←── 每次 /ingest 后重新生成
 
 ## 质量保障
 
-**第一层——确定性检查。** `health-check.ps1`（Windows）或 `health-check.py`（Mac/Linux）跑 8 项，不调 LLM，零 token 消耗：
+**第一层——确定性检查。** `health-check.py` 跑 8 项，不调 LLM，零 token 消耗：
 
 1. 断链检测
 2. 孤立笔记（无入链且超 24 小时）
 3. 空文件
 4. frontmatter 一致性（每种笔记类型的必填字段）
-5. 对称链接（`-Strict` 模式）
+5. 对称链接（`--strict` 模式）
 6. 题库完整性（格式、INDEX 一致性、bank.json 同步）
 7. 状态完整性（sessions 与 state 漂移检测）
 8. 日志完整性（格式、时间顺序）
@@ -97,33 +87,20 @@ wiki/overview.md   ←── 每次 /ingest 后重新生成
 
 ## 脚本
 
-**健康检查（跨平台）：**
-
 ```bash
-# Mac / Linux
+# 健康检查
 python3 scripts/health-check.py --verbose
 python3 scripts/health-check.py --strict
 python3 scripts/health-check.py --json
-```
 
-```powershell
-# Windows
-.\scripts\health-check.ps1 -Verbose
-.\scripts\health-check.ps1 -Strict
-.\scripts\health-check.ps1 -Json
-```
-
-**编译和 eval（Windows，Mac 可装 PowerShell Core）：**
-
-```powershell
-# 增量编译 + quiz 依赖检测
-.\scripts\compile.ps1
-.\scripts\compile.ps1 -Full
-.\scripts\compile.ps1 -WhatIf
+# 编译——增量变更检测 + quiz 依赖扫描
+python3 scripts/compile.py
+python3 scripts/compile.py --full
+python3 scripts/compile.py --what-if
 
 # Eval
-.\scripts\eval.ps1 -Verbose
-.\scripts\eval-llm.ps1 -Verbose
+python3 scripts/eval.py --verbose
+python3 scripts/eval-llm.py --verbose
 ```
 
 ## 目录结构
@@ -138,7 +115,7 @@ python3 scripts/health-check.py --json
 | `temp/` | 中间产物 | ignored |
 | `output/` | 生成的测验 HTML | ignored |
 | `prompts/` | 9 个 LLM prompt 模板 | tracked |
-| `scripts/` | PowerShell 工具脚本 | tracked |
+| `scripts/` | Python 工具脚本（跨平台） | tracked |
 | `.claude/skills/` | Claude Code 斜杠命令定义 | tracked |
 
 知识和题库默认 gitignore。想跨设备同步的话，在 `.gitignore` 里取消 `raw/`、`wiki/`、`questions/` 的忽略——但记得用**私人仓库**。

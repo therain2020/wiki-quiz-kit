@@ -116,10 +116,7 @@ Add new notes to relevant Maps of Content. Add to the relevant MOC in `wiki/moc/
    ## [YYYY-MM-DD HH:MM] ingest | {title}
    ```
 2. **Overview:** Regenerate `wiki/overview.md` — read all wiki stats (note counts, topic coverage) and update the summary. Include recent activity from the last 5 log entries. Identify knowledge gaps (frequently-linked concepts lacking pages, topics with quiz accuracy below 40%).
-3. **Health check:** Detect OS and run the appropriate health check:
-   - Windows: `.\scripts\health-check.ps1 -Verbose`
-   - Mac/Linux: `python3 scripts/health-check.py --verbose`
-   Report: broken links, orphans, empty files, frontmatter errors. Fix any issues.
+3. **Health check:** Run `python3 scripts/health-check.py --verbose`. Report: broken links, orphans, empty files, frontmatter errors. Fix any issues.
 
 ## Design Principles
 
@@ -132,7 +129,7 @@ Add new notes to relevant Maps of Content. Add to the relevant MOC in `wiki/moc/
 
 ## Related
 
-- `scripts/compile.ps1` — deterministic change detection + file-to-prompt mapping
-- `scripts/health-check.ps1` — CI for knowledge integrity
+- `scripts/compile.py` — deterministic change detection + file-to-prompt mapping
+- `scripts/health-check.py` — CI for knowledge integrity
 - `prompts/` — 9 compiler pass templates (including ingest-analysis)
 - `CLAUDE.md` — project-level Claude Code configuration

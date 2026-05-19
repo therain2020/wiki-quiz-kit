@@ -7,7 +7,7 @@ description: LLM-driven semantic wiki audit. Checks contradictions, stale claims
 
 ## Purpose
 
-Complement the deterministic `health-check.ps1` with LLM-powered semantic analysis. Tier 1 (health-check) catches structural problems. Tier 2 (/lint) catches meaning-level problems.
+Complement the deterministic health check (`health-check.py`) with LLM-powered semantic analysis. Tier 1 (health-check) catches structural problems. Tier 2 (/lint) catches meaning-level problems.
 
 Trigger: "lint", "语义检查", "audit wiki", "deep check", "run lint"
 
@@ -90,4 +90,4 @@ Present a summary to the user. Ask which issues to fix.
 
 ## Design note
 
-This is complementary to `health-check.ps1`, not a replacement. health-check runs on every compile (deterministic, zero token cost). /lint runs on demand (LLM-powered, semantic depth).
+This is complementary to `health-check.py`, not a replacement. health-check runs on every compile (deterministic, zero token cost). /lint runs on demand (LLM-powered, semantic depth).
