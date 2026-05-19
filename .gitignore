@@ -30,3 +30,12 @@ logs/
 
 # Generated quiz HTML (local only)
 output/
+
+# Quiz state (personal, derived from sessions/)
+state/
+
+# Quiz session WAL (personal answer history)
+sessions/
+
+# M2M ephemeral (drafts, intermediate outputs)
+temp/

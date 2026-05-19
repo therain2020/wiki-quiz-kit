@@ -94,6 +94,95 @@ function Test-HasBody {
     return @{ Pass = $false; Reason = "No body content beyond frontmatter" }
 }
 
+# ── State-update check ────────────────────────────────────
+
+function Test-StateUpdate {
+    param([string]$CasePath, [string]$CaseName)
+    $results = @()
+    $givenFile = Join-Path $CasePath "given-state.json"
+    $sessFile = Join-Path $CasePath "session.json"
+    $expFile = Join-Path $CasePath "expected-state.json"
+
+    if (-not (Test-Path $givenFile)) {
+        return @(@{ Pass=$false; Reason="Missing given-state.json" })
+    }
+    if (-not (Test-Path $sessFile)) {
+        return @(@{ Pass=$false; Reason="Missing session.json" })
+    }
+    if (-not (Test-Path $expFile)) {
+        return @(@{ Pass=$false; Reason="Missing expected-state.json" })
+    }
+
+    try {
+        $given = Get-Content -Path $givenFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        $sess = Get-Content -Path $sessFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        $exp = Get-Content -Path $expFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch {
+        return @(@{ Pass=$false; Reason="Parse error: $_" })
+    }
+
+    # Build actual result by simulating state update
+    $actual = @{}
+    # Copy given state into actual
+    foreach ($prop in $given.PSObject.Properties) {
+        $actual[$prop.Name] = @{
+            attempts      = $prop.Value.attempts
+            correct       = $prop.Value.correct
+            wrong         = $prop.Value.wrong
+            last_result   = $prop.Value.last_result
+            last_attempt  = $prop.Value.last_attempt
+        }
+    }
+
+    # Apply session answers
+    foreach ($a in $sess.answers) {
+        $qid = $a.id
+        if (-not $actual.ContainsKey($qid)) {
+            $actual[$qid] = @{ attempts=0; correct=0; wrong=0; last_result=""; last_attempt="" }
+        }
+        $actual[$qid].attempts = $actual[$qid].attempts + 1
+        if ($a.result -eq 'correct') { $actual[$qid].correct = $actual[$qid].correct + 1 }
+        else { $actual[$qid].wrong = $actual[$qid].wrong + 1 }
+        $actual[$qid].last_result = $a.result
+        $actual[$qid].last_attempt = $sess.date
+    }
+
+    # Compare with expected
+    foreach ($prop in $exp.PSObject.Properties) {
+        $qid = $prop.Name
+        if (-not $actual.ContainsKey($qid)) {
+            $results += @{ Pass=$false; Reason="Expected state for '$qid' but not in actual output" }
+            continue
+        }
+        $a = $actual[$qid]
+        $e = $prop.Value
+        if ($a.attempts -ne $e.attempts) {
+            $results += @{ Pass=$false; Reason="'$qid' attempts: expected $($e.attempts), got $($a.attempts)" }
+        } elseif ($a.correct -ne $e.correct) {
+            $results += @{ Pass=$false; Reason="'$qid' correct: expected $($e.correct), got $($a.correct)" }
+        } elseif ($a.wrong -ne $e.wrong) {
+            $results += @{ Pass=$false; Reason="'$qid' wrong: expected $($e.wrong), got $($a.wrong)" }
+        } elseif ($a.last_result -ne $e.last_result) {
+            $results += @{ Pass=$false; Reason="'$qid' last_result: expected '$($e.last_result)', got '$($a.last_result)'" }
+        } elseif ($a.last_attempt -ne $e.last_attempt) {
+            $results += @{ Pass=$false; Reason="'$qid' last_attempt mismatch" }
+        } else {
+            $results += @{ Pass=$true; Reason="'$qid' state matches expected" }
+        }
+    }
+
+    # Check for extra actual entries not in expected
+    foreach ($prop in $actual.Keys) {
+        $found = $false
+        foreach ($ep in $exp.PSObject.Properties) { if ($ep.Name -eq $prop) { $found = $true; break } }
+        if (-not $found) {
+            $results += @{ Pass=$false; Reason="Unexpected state for '$prop' (not in expected-state.json)" }
+        }
+    }
+
+    return $results
+}
+
 # ── Main ─────────────────────────────────────────────────
 
 Write-Host "=== Eval Runner ===" -ForegroundColor Cyan
@@ -106,7 +195,7 @@ if (-not (Test-Path $evalsDir)) {
     exit 2
 }
 
-$cases = Get-ChildItem -Path $evalsDir -Directory | Sort-Object Name
+$cases = Get-ChildItem -Path $evalsDir -Directory -Recurse | Sort-Object FullName
 
 foreach ($case in $cases) {
     $totalCases++
@@ -114,26 +203,43 @@ foreach ($case in $cases) {
     $expectedFile = Join-Path $case.FullName "expected.md"
     $metaFile = Join-Path $case.FullName "meta.json"
 
-    if (-not (Test-Path $expectedFile)) {
-        Write-Host "[$($case.Name)] SKIP — no expected.md" -ForegroundColor DarkGray
-        continue
-    }
-
-    $expectedContent = Get-Content -Path $expectedFile -Raw -Encoding UTF8
+    # Read meta first to determine case type
     $meta = @{}
     if (Test-Path $metaFile) {
         try { $meta = Get-Content $metaFile -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
     }
-
     $expectedType = if ($meta.expectedType) { $meta.expectedType } else { $null }
+
+    # Question-gen cases go through eval-llm.ps1, skip here
+    if ($expectedType -eq 'question-gen') {
+        Write-Host "[$($case.Name)] SKIP — use eval-llm.ps1 for question-gen" -ForegroundColor DarkGray
+        continue
+    }
+
+    # State-update uses expected-state.json instead of expected.md
+    if ($expectedType -eq 'state-update') {
+        $expectedFile = Join-Path $case.FullName "expected-state.json"
+    }
+
+    if (-not (Test-Path $expectedFile)) {
+        $skipMsg = if ($expectedType -eq 'state-update') { "no expected-state.json" } else { "no expected.md" }
+        Write-Host "[$($case.Name)] SKIP — $skipMsg" -ForegroundColor DarkGray
+        continue
+    }
+
+    $expectedContent = Get-Content -Path $expectedFile -Raw -Encoding UTF8
     $expectFail = if ($meta.expectFail) { $meta.expectFail } else { $false }
 
     Write-Host "[$($case.Name)] " -NoNewline
 
     $checks = @()
-    $checks += Test-FrontmatterValid -Content $expectedContent -CaseName $case.Name -RequiredType $expectedType
-    $checks += Test-HasBody -Content $expectedContent -CaseName $case.Name
-    $checks += Test-NotBrokenLinks -Content $expectedContent -CaseName $case.Name
+    if ($expectedType -eq 'state-update') {
+        $checks += Test-StateUpdate -CasePath $case.FullName -CaseName $case.Name
+    } else {
+        $checks += Test-FrontmatterValid -Content $expectedContent -CaseName $case.Name -RequiredType $expectedType
+        $checks += Test-HasBody -Content $expectedContent -CaseName $case.Name
+        $checks += Test-NotBrokenLinks -Content $expectedContent -CaseName $case.Name
+    }
 
     $allPassed = ($checks | Where-Object { -not $_.Pass }).Count -eq 0
 

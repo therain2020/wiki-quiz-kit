@@ -38,7 +38,8 @@
               "empty-file",
               "frontmatter",
               "symmetric-link",
-              "question-bank"
+              "question-bank",
+              "state-integrity"
             ],
             "description": "Which of the 6 health checks raised this issue"
           },

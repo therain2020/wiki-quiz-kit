@@ -14,7 +14,10 @@ $dirs = @(
     "wiki/permanent", "wiki/literature", "wiki/daily", "wiki/moc",
     "questions",
     "evals/cases",
-    "output"
+    "output",
+    "temp",
+    "sessions",
+    "state"
 )
 
 Write-Host "[1/3] Creating directories..." -ForegroundColor Cyan
@@ -48,7 +51,7 @@ modified: "$(Get-Date -Format 'yyyy-MM-dd')"
 - 用 `/ingest <URL>` 一键摄入视频或文章，自动生成复习题
 - 用 `/review` 刷题复习，支持按主题筛选和错题回顾
 - 笔记模板在 `templates/` 目录
-- prompts/ 目录有 7 个 LLM 编译器 prompt，可直接使用或修改
+- prompts/ 目录有 8 个 LLM 编译器 prompt，可直接使用或修改
 
 ## Next
 - [ ] 往 raw/inbox/ 扔你的第一个想法

@@ -135,6 +135,47 @@ function Get-ChangedFiles {
     return @{ changed = $changed; unchanged = $unchanged }
 }
 
+# ── Quiz dependency detection ────────────────────────────
+
+function Get-QuizDependencies {
+    param([array]$ChangedFiles)
+
+    $affected = @()
+    $qDir = Join-Path $vaultRoot "questions"
+    if (-not (Test-Path $qDir)) { return $affected }
+
+    # Extract slugs from changed wiki-bound files
+    $changedSlugs = @{}
+    foreach ($f in $ChangedFiles) {
+        if ($f.Prompt -and $f.Prompt.OutputDir -match 'wiki') {
+            $slug = [System.IO.Path]::GetFileNameWithoutExtension($f.Path)
+            $changedSlugs[$slug] = $true
+        }
+    }
+
+    if ($changedSlugs.Count -eq 0) { return $affected }
+
+    # Scan questions for matching source fields
+    $qFiles = Get-ChildItem -Path $qDir -Filter "*.md" -File | Where-Object { $_.Name -ne "INDEX.md" }
+    foreach ($qf in $qFiles) {
+        $content = Get-Content -Path $qf.FullName -Raw -Encoding UTF8
+        if ($content -match '(?s)^---\s*\r?\n.*?\r?\n---') {
+            $fmBlock = $matches[0]
+            if ($fmBlock -match 'source:\s*(\S+)') {
+                $sourceSlug = $matches[1].Trim()
+                if ($changedSlugs.ContainsKey($sourceSlug)) {
+                    $affected += @{
+                        QuestionFile = Get-RelativeVaultPath $qf.FullName
+                        SourceSlug   = $sourceSlug
+                    }
+                }
+            }
+        }
+    }
+
+    return $affected
+}
+
 # ── Main ────────────────────────────────────────────────
 
 $state = Load-State
@@ -172,6 +213,7 @@ if ($Json) {
         totalFiles     = ($scanResult.changed.Count + $scanResult.unchanged.Count)
         changedCount   = $scanResult.changed.Count
         tasks          = @()
+        quizAffected   = @()
     }
 
     foreach ($f in $scanResult.changed) {
@@ -181,6 +223,14 @@ if ($Json) {
             outputDir  = if ($f.Prompt) { $f.Prompt.OutputDir } else { $null }
             lastWrite  = $f.LastWrite
             status     = "pending"
+        }
+    }
+
+    $quizDepsJson = Get-QuizDependencies -ChangedFiles $scanResult.changed
+    foreach ($d in $quizDepsJson) {
+        $jsonOutput.quizAffected += @{
+            questionFile = $d.QuestionFile
+            sourceSlug   = $d.SourceSlug
         }
     }
 
@@ -198,6 +248,17 @@ if (-not $Json -and $scanResult.changed.Count -gt 0) {
         Write-Host "  $($f.Path)"
         Write-Host "    Prompt: $promptRel"
         Write-Host "    Output: $outRel"
+    }
+
+    # Quiz dependency check
+    $quizDeps = Get-QuizDependencies -ChangedFiles $scanResult.changed
+    if ($quizDeps.Count -gt 0) {
+        Write-Host ""
+        Write-Host "Quiz questions affected by changes: $($quizDeps.Count)" -ForegroundColor Yellow
+        foreach ($d in $quizDeps) {
+            Write-Host "  $($d.QuestionFile) (source: $($d.SourceSlug))" -ForegroundColor Yellow
+        }
+        Write-Host "Consider re-running /ingest Stage 5.5 to regenerate these questions." -ForegroundColor Yellow
     }
 }
 
@@ -237,6 +298,18 @@ if ($Process -and $scanResult.changed.Count -gt 0) {
         Write-Host "  To compile: $($f.Path)"
         Write-Host "    Run: Read the file, apply $($f.Prompt.PromptFile), write output to $($f.Prompt.OutputDir)/"
         Write-Host "    (LLM invocation requires manual execution via Claude Code)"
+    }
+
+    # ── Quiz dependency gate ─────────────────────────────
+    $quizDeps = Get-QuizDependencies -ChangedFiles $scanResult.changed
+    if ($quizDeps.Count -gt 0) {
+        Write-Host ""
+        Write-Host "--- Quiz Dependency ---" -ForegroundColor Yellow
+        Write-Host "$($quizDeps.Count) question(s) may be outdated:" -ForegroundColor Yellow
+        foreach ($d in $quizDeps) {
+            Write-Host "  $($d.QuestionFile) (source: $($d.SourceSlug))" -ForegroundColor Yellow
+        }
+        Write-Host "Re-run /ingest Stage 5.5 to regenerate. Old questions will be deprecated, not deleted." -ForegroundColor Yellow
     }
 
     # ── Eval gate ────────────────────────────────────────

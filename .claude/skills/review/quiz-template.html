@@ -170,12 +170,12 @@
 var Q = {{QUESTIONS_JSON}};
 var TOTAL = Q.length;
 var STORAGE = 'quiz-{{QUIZ_SLUG}}';
-var WRONG_KEY = 'quiz-wrong-bank';
+var SESSION_ID = '{{SESSION_ID}}';
+var SESSION_DATE = '{{SESSION_DATE}}';
+var MODE = '{{MODE}}';
 
 var state = { idx:0, answers:{}, done:false };
 
-function loadWrong(){ try{return JSON.parse(localStorage.getItem(WRONG_KEY))||[]}catch(e){return[];} }
-function saveWrong(arr){ localStorage.setItem(WRONG_KEY, JSON.stringify(arr)); }
 function loadState(){ try{return JSON.parse(localStorage.getItem(STORAGE))||state}catch(e){return state;} }
 function saveState(){ localStorage.setItem(STORAGE, JSON.stringify(state)); }
 
@@ -243,13 +243,6 @@ function renderCard(){
 function pick(i){
   if(state.answers[state.idx]!==undefined) return;
   state.answers[state.idx]=i;
-  var isRight = i===Q[state.idx].answer;
-  // Track wrong
-  if(!isRight){
-    var wrong=loadWrong();
-    if(wrong.indexOf(Q[state.idx].id)===-1) wrong.push(Q[state.idx].id);
-    saveWrong(wrong);
-  }
   saveState();
   renderDots();
   renderCard();
@@ -286,7 +279,7 @@ function showFinish(){
   }
   h+='<div class="act-row">';
   h+='<button class="btn on" onclick="restart()">再来一组</button>';
-  if(loadWrong().length>0) h+='<button class="btn" onclick="reviewWrong()">复习错题 ('+loadWrong().length+'道)</button>';
+  h+='<span style="font-size:0.76rem;color:var(--ink-muted)" id="copy-status"></span>';
   h+='</div>';
   document.getElementById('card-area').innerHTML='';
   document.getElementById('nav-row').innerHTML='';
@@ -294,10 +287,31 @@ function showFinish(){
   document.getElementById('finish').innerHTML=h;
   document.getElementById('dots').innerHTML='';
   document.getElementById('pos-label').textContent='';
+  // Auto-copy session JSON to clipboard
+  copySession().then(function(){
+    document.getElementById('copy-status').textContent='已复制到剪贴板 ✓';
+  });
 }
 
 function restart(){ localStorage.removeItem(STORAGE); location.reload(); }
-function reviewWrong(){ alert('下次说"错题复习"即可只出这 '+loadWrong().length+' 道错题。'); }
+
+function buildSession(){
+  var answers=[];
+  for(var i=0;i<TOTAL;i++){
+    if(state.answers[i]!==undefined){
+      answers.push({id:Q[i].id, result:state.answers[i]===Q[i].answer?'correct':'wrong'});
+    }
+  }
+  var right=answers.filter(function(a){return a.result==='correct'}).length;
+  return {session_id:SESSION_ID, date:SESSION_DATE, mode:MODE, total:TOTAL, score:right, answers:answers};
+}
+
+function copySession(){
+  var s=buildSession();
+  return navigator.clipboard.writeText(JSON.stringify(s,null,2)).catch(function(){
+    document.getElementById('copy-status').textContent='复制失败，请重试';
+  });
+}
 
 (function(){
   var t=localStorage.getItem('plan-theme');

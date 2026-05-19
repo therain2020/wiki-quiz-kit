@@ -1,0 +1,10 @@
+{
+  "minQuestions": 1,
+  "maxQuestions": 5,
+  "checks": {
+    "optionsCount": 4,
+    "hasExplanation": true,
+    "answerInRange": true,
+    "requiredFields": ["id", "topic", "difficulty", "source", "question", "options", "answer", "explanation"]
+  }
+}

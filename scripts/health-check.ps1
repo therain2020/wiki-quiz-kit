@@ -247,6 +247,7 @@ function Test-SymmetricLinks {
 function Test-QuestionBank {
     $result = @()
     $qDir = Join-Path $vaultRoot "questions"
+
     if (-not (Test-Path $qDir)) {
         $result += @{
             Type    = "warning"
@@ -256,24 +257,224 @@ function Test-QuestionBank {
         }
         return $result
     }
-    $qFiles = Get-ChildItem -Path $qDir -Filter "*.md" -File | Where-Object { $_.Name -ne "INDEX.md" }
-    if ($qFiles.Count -lt 5) {
-        $result += @{
-            Type    = "warning"
-            Check   = "question-bank"
-            File    = "questions/"
-            Message = "Question bank has only $($qFiles.Count) questions (minimum 5 recommended). Run backfill or ingest more content."
-        }
-    }
+
+    # Check INDEX.md
     $indexFile = Join-Path $qDir "INDEX.md"
     if (-not (Test-Path $indexFile)) {
-        $result += @{
-            Type    = "error"
-            Check   = "question-bank"
-            File    = "questions/INDEX.md"
-            Message = "INDEX.md is missing. Run ingest to regenerate the index."
+        $result += @{ Type="error"; Check="question-bank"; File="questions/INDEX.md"
+                       Message="INDEX.md is missing. Run ingest to regenerate." }
+    }
+
+    # Scan actual question files (single pass)
+    $qFiles = Get-ChildItem -Path $qDir -Filter "*.md" -File | Where-Object { $_.Name -ne "INDEX.md" }
+    $topics = @{}
+    $qIds = @{}
+
+    foreach ($file in $qFiles) {
+        $content = Get-Content -Path $file.FullName -Raw -Encoding UTF8
+        $fm = Get-Frontmatter -Content $content
+
+        $topic = if ($fm.ContainsKey('topic')) { $fm['topic'] } else { "(unknown)" }
+        if (-not $topics.ContainsKey($topic)) { $topics[$topic] = 0 }
+        $topics[$topic]++
+
+        $qid = if ($fm.ContainsKey('id')) { $fm['id'] } else { $file.BaseName }
+        $qIds[$qid] = $file
+
+        # Validate body format
+        if ($content -notmatch '\*\*答案:\*\*\s*[A-D]') {
+            $result += @{ Type="error"; Check="question-bank"; File=(Get-RelativePath $file.FullName)
+                           Message="Missing '**答案:** X' in question body" }
+        }
+        if ($content -notmatch '\*\*解析:\*\*') {
+            $result += @{ Type="error"; Check="question-bank"; File=(Get-RelativePath $file.FullName)
+                           Message="Missing '**解析:**' section in question body" }
+        }
+
+        # Count options (A. B. C. D. lines)
+        $optMatches = [regex]::Matches($content, '^[A-D]\.\s')
+        if ($optMatches.Count -lt 2) {
+            $result += @{ Type="error"; Check="question-bank"; File=(Get-RelativePath $file.FullName)
+                           Message="Fewer than 2 options found (got $($optMatches.Count))" }
+        }
+
+        # Source link check
+        $isDeprecated = ($fm.ContainsKey('deprecated') -and $fm['deprecated'] -eq 'true')
+        $source = if ($fm.ContainsKey('source')) { $fm['source'] } else { $null }
+        if ($source) {
+            $wikiFound = $false
+            foreach ($dir in @('wiki/permanent', 'wiki/literature')) {
+                if (Test-Path (Join-Path $vaultRoot "$dir/$source.md")) { $wikiFound = $true; break }
+            }
+            if (-not $wikiFound) {
+                $level = if ($isDeprecated) { "info" } else { "error" }
+                $result += @{ Type=$level; Check="question-bank"; File=(Get-RelativePath $file.FullName)
+                               Message="Source '$source' not found in wiki/. $(
+                                   if($isDeprecated){'(deprecated question — review is skipped)'}else{''})" }
+            }
         }
     }
+
+    # Per-topic count
+    foreach ($t in $topics.GetEnumerator()) {
+        if ($t.Value -lt 3) {
+            $result += @{ Type="warning"; Check="question-bank"; File="questions/"
+                           Message="Topic '$($t.Name)' has only $($t.Value) question(s) (minimum 3 recommended)" }
+        }
+    }
+
+    # Source link check + INDEX stale check
+    $indexListedIds = @{}
+    if (Test-Path $indexFile) {
+        $indexContent = Get-Content -Path $indexFile -Raw -Encoding UTF8
+        $indexTopics = @{}
+        $idxTopicMatches = [regex]::Matches($indexContent, '^##\s+(.+)$', [System.Text.RegularExpressions.RegexOptions]::Multiline)
+        foreach ($m in $idxTopicMatches) {
+            $indexTopics[$m.Groups[1].Value.Trim()] = $true
+        }
+        # Extract question IDs from INDEX.md table rows (| id | ... |)
+        $idMatches = [regex]::Matches($indexContent, '^\|\s*([\w-]+)\s*\|', [System.Text.RegularExpressions.RegexOptions]::Multiline)
+        foreach ($m in $idMatches) {
+            $idxId = $m.Groups[1].Value.Trim()
+            # Skip table headers, separators, and non-ID text
+            if ($idxId -notmatch '^[a-zA-Z0-9][\w-]+$') { continue }
+            $indexListedIds[$idxId] = $true
+        }
+        foreach ($t in $topics.GetEnumerator()) {
+            if (-not $indexTopics.ContainsKey($t.Name)) {
+                $result += @{ Type="warning"; Check="question-bank"; File="questions/INDEX.md"
+                               Message="Topic '$($t.Name)' has questions but not listed in INDEX.md" }
+            }
+        }
+    }
+
+    # INDEX stale (missing): question exists but not in INDEX.md
+    foreach ($qid in $qIds.Keys) {
+        if ($indexListedIds.Count -gt 0 -and -not $indexListedIds.ContainsKey($qid)) {
+            $result += @{ Type="warning"; Check="question-bank"; File="questions/INDEX.md"
+                           Message="Question '$qid' not listed in INDEX.md" }
+        }
+    }
+
+    # INDEX stale (extra): INDEX.md lists ID that has no .md file
+    foreach ($idxId in $indexListedIds.Keys) {
+        if (-not $qIds.ContainsKey($idxId)) {
+            $result += @{ Type="error"; Check="question-bank"; File="questions/INDEX.md"
+                           Message="INDEX.md lists '$idxId' but file questions/$idxId.md does not exist" }
+        }
+    }
+
+    return $result
+}
+
+# ── Check 7: State Integrity ─────────────────────────────
+
+function Test-StateIntegrity {
+    $result = @()
+    $stateDir = Join-Path $vaultRoot "state"
+    $sessDir = Join-Path $vaultRoot "sessions"
+
+    # Build known question ID set
+    $knownQIds = @{}
+    $qDir = Join-Path $vaultRoot "questions"
+    if (Test-Path $qDir) {
+        $qFiles = Get-ChildItem -Path $qDir -Filter "*.md" -File | Where-Object { $_.Name -ne "INDEX.md" }
+        foreach ($qf in $qFiles) {
+            $qContent = Get-Content -Path $qf.FullName -Raw -Encoding UTF8
+            $qFm = Get-Frontmatter -Content $qContent
+            $qid = if ($qFm.ContainsKey('id')) { $qFm['id'] } else { $qf.BaseName }
+            $knownQIds[$qid] = $true
+        }
+    }
+
+    # Nothing to check if no sessions exist
+    if (-not (Test-Path $sessDir)) {
+        # Still check state→question links even without sessions
+        if (Test-Path $stateDir) {
+            $stateFiles = Get-ChildItem -Path $stateDir -Filter "*.json" -File
+            foreach ($sf in $stateFiles) {
+                $qid = $sf.BaseName
+                if ($knownQIds.Count -gt 0 -and -not $knownQIds.ContainsKey($qid)) {
+                    $result += @{ Type="error"; Check="state-integrity"; File="state/$($sf.Name)"
+                                   Message="State file for '$qid' but question does not exist in questions/" }
+                }
+            }
+        }
+        return $result
+    }
+    $sessFiles = Get-ChildItem -Path $sessDir -Filter "*.json" -File
+    if ($sessFiles.Count -eq 0) { return $result }
+
+    # Replay all sessions to compute expected state
+    $expected = @{}
+    foreach ($sf in $sessFiles) {
+        try {
+            $sData = Get-Content -Path $sf.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+            foreach ($a in $sData.answers) {
+                $qid = $a.id
+                # Session→question link check
+                if ($knownQIds.Count -gt 0 -and -not $knownQIds.ContainsKey($qid)) {
+                    $result += @{ Type="warning"; Check="state-integrity"; File=(Get-RelativePath $sf.FullName)
+                                   Message="Session references question '$qid' which does not exist in questions/" }
+                }
+                if (-not $expected.ContainsKey($qid)) {
+                    $expected[$qid] = @{ attempts = 0; correct = 0; wrong = 0; last_result = ""; last_attempt = "" }
+                }
+                $expected[$qid].attempts = $expected[$qid].attempts + 1
+                if ($a.result -eq 'correct') { $expected[$qid].correct = $expected[$qid].correct + 1 }
+                else { $expected[$qid].wrong = $expected[$qid].wrong + 1 }
+                $expected[$qid].last_result = $a.result
+                $expected[$qid].last_attempt = $sData.date
+            }
+        } catch {
+            $result += @{ Type="warning"; Check="state-integrity"; File=(Get-RelativePath $sf.FullName)
+                           Message="Could not parse session file: $_" }
+        }
+    }
+
+    # Compare against actual state files
+    if (Test-Path $stateDir) {
+        foreach ($qid in $expected.Keys) {
+            $stateFile = Join-Path $stateDir "$qid.json"
+            if (-not (Test-Path $stateFile)) {
+                $result += @{ Type="error"; Check="state-integrity"; File="state/$qid.json"
+                               Message="State file missing for question '$qid' (expected from sessions). Concurrent write likely failed." }
+                continue
+            }
+            try {
+                $st = Get-Content -Path $stateFile -Raw -Encoding UTF8 | ConvertFrom-Json
+                $exp = $expected[$qid]
+                if ($st.attempts -lt $exp.attempts) {
+                    $result += @{ Type="warning"; Check="state-integrity"; File="state/$qid.json"
+                                   Message="State attempts=$($st.attempts) but sessions expect $($exp.attempts). State is behind." }
+                } elseif ($st.attempts -gt $exp.attempts) {
+                    $result += @{ Type="warning"; Check="state-integrity"; File="state/$qid.json"
+                                   Message="State attempts=$($st.attempts) exceeds session total $($exp.attempts). Possible data inconsistency." }
+                }
+            } catch {
+                $result += @{ Type="warning"; Check="state-integrity"; File="state/$qid.json"
+                               Message="Could not parse state file: $_" }
+            }
+        }
+    }
+
+    # Check for state files without any session history (orphan states) + state→question links
+    if (Test-Path $stateDir) {
+        $stateFiles = Get-ChildItem -Path $stateDir -Filter "*.json" -File
+        foreach ($sf in $stateFiles) {
+            $qid = $sf.BaseName
+            # State→question link check
+            if ($knownQIds.Count -gt 0 -and -not $knownQIds.ContainsKey($qid)) {
+                $result += @{ Type="error"; Check="state-integrity"; File="state/$($sf.Name)"
+                               Message="State file for '$qid' but question does not exist in questions/" }
+            }
+            if (-not $expected.ContainsKey($qid)) {
+                $result += @{ Type="warning"; Check="state-integrity"; File="state/$($sf.Name)"
+                               Message="State file for '$qid' has no matching sessions. Orphan state." }
+            }
+        }
+    }
+
     return $result
 }
 
@@ -286,40 +487,46 @@ $allErrors = @()
 $allWarnings = @()
 
 # Run checks
-Write-Host "[1/6] Broken Wiki-Links ............... " -NoNewline
+Write-Host "[1/7] Broken Wiki-Links ............... " -NoNewline
 $r1 = Test-BrokenLinks
 $allErrors += $r1
 Write-Host "$($r1.Count) issues" -ForegroundColor $(if ($r1.Count -gt 0) { 'Red' } else { 'Green' })
 
-Write-Host "[2/6] Orphan Notes .................... " -NoNewline
+Write-Host "[2/7] Orphan Notes .................... " -NoNewline
 $r2 = Test-OrphanNotes
 $allWarnings += $r2
 Write-Host "$($r2.Count) issues" -ForegroundColor $(if ($r2.Count -gt 0) { 'Yellow' } else { 'Green' })
 
-Write-Host "[3/6] Empty Files ..................... " -NoNewline
+Write-Host "[3/7] Empty Files ..................... " -NoNewline
 $r3 = Test-EmptyFiles
 $allErrors += $r3
 Write-Host "$($r3.Count) issues" -ForegroundColor $(if ($r3.Count -gt 0) { 'Red' } else { 'Green' })
 
-Write-Host "[4/6] Frontmatter Consistency ......... " -NoNewline
+Write-Host "[4/7] Frontmatter Consistency ......... " -NoNewline
 $r4 = Test-Frontmatter
 $allErrors += $r4
 Write-Host "$($r4.Count) issues" -ForegroundColor $(if ($r4.Count -gt 0) { 'Red' } else { 'Green' })
 
 if ($Strict) {
-    Write-Host "[5/6] Symmetric Links ................. " -NoNewline
+    Write-Host "[5/7] Symmetric Links ................. " -NoNewline
     $r5 = Test-SymmetricLinks
     $allWarnings += $r5
     Write-Host "$($r5.Count) issues" -ForegroundColor $(if ($r5.Count -gt 0) { 'Yellow' } else { 'Green' })
 } else {
-    Write-Host "[5/6] Symmetric Links ................. skipped (use -Strict)" -ForegroundColor DarkGray
+    Write-Host "[5/7] Symmetric Links ................. skipped (use -Strict)" -ForegroundColor DarkGray
 }
 
-Write-Host "[6/6] Question Bank Integrity ......... " -NoNewline
+Write-Host "[6/7] Question Bank Integrity ......... " -NoNewline
 $r6 = Test-QuestionBank
 $allErrors += ($r6 | Where-Object { $_.Type -eq 'error' })
 $allWarnings += ($r6 | Where-Object { $_.Type -eq 'warning' })
 Write-Host "$($r6.Count) issues" -ForegroundColor $(if ($r6.Count -gt 0) { 'Yellow' } else { 'Green' })
+
+Write-Host "[7/7] State Integrity ................. " -NoNewline
+$r7 = Test-StateIntegrity
+$allErrors += ($r7 | Where-Object { $_.Type -eq 'error' })
+$allWarnings += ($r7 | Where-Object { $_.Type -eq 'warning' })
+Write-Host "$($r7.Count) issues" -ForegroundColor $(if ($r7.Count -gt 0) { 'Yellow' } else { 'Green' })
 
 Write-Host ""
 

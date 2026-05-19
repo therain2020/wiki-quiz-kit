@@ -66,7 +66,34 @@ For each key concept identified in the literature note, generate an atomic perma
 
 ### Stage 5.5: Generate Questions
 
-Auto-generate review questions from the new content. Save to `questions/<topic-slug>-<n>.md`. Update `questions/INDEX.md`.
+Uses `prompts/generate-questions.md` (8th compiler pass). Structured pipeline:
+
+1. **Generate draft** — LLM reads new wiki notes + applies `prompts/generate-questions.md`, outputs JSON to `temp/draft-{slug}.json`
+2. **Validate** — check each question in the draft:
+   - `id`, `topic`, `difficulty`, `source`, `question`, `explanation` are non-empty
+   - `options` has at least 2 items
+   - `answer` is a valid index into `options`
+3. **On validation failure** — rename draft to `temp/draft-{slug}_REJECTED.json`, report which questions failed and why
+4. **On validation pass** — for each question, write `questions/{question.id}.md`:
+   ```markdown
+   ---
+   type: question
+   id: {id}
+   topic: {topic}
+   difficulty: {difficulty}
+   source: {source}
+   created: "YYYY-MM-DD"
+   ---
+   # {question}
+   A. {options[0]}
+   B. {options[1]}
+   C. {options[2]}
+   D. {options[3]}
+   **答案:** {A|B|C|D}
+   **解析:** {explanation}
+   ```
+5. **Update INDEX.md** — add each new question to the appropriate topic section in `questions/INDEX.md`
+6. **Keep draft** — `temp/draft-{slug}.json` stays for traceability, user deletes when ready
 
 ### Stage 6: Update MOC
 
@@ -88,5 +115,5 @@ Run `scripts/health-check.ps1 -Verbose`. Report: broken links, orphans, empty fi
 
 - `scripts/compile.ps1` — deterministic change detection + file-to-prompt mapping
 - `scripts/health-check.ps1` — CI for knowledge integrity
-- `prompts/` — 7 compiler pass templates
+- `prompts/` — 8 compiler pass templates
 - `CLAUDE.md` — project-level Claude Code configuration
