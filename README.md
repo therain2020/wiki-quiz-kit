@@ -45,7 +45,7 @@ It pulls the YouTube transcript, cleans the VTT noise, runs a two-step chain-of-
 | wrong | questions you got wrong last time |
 | consolidate | attempted but accuracy below 80% |
 
-The HTML embeds the full question pool. Click "再来一组" and it re-rolls from the pool in the browser. No LLM call, no page reload. After answering, session JSON auto-downloads. Run `python3 scripts/watch-sessions.py` in the background and your per-question stats update automatically.
+The HTML embeds every question matching your tag filter. Click "再来一组" and it re-rolls from that set in the browser. No LLM call, no page reload. After answering, session JSON auto-downloads. Run `python3 scripts/watch-sessions.py` in the background and your per-question stats update automatically.
 
 **`/lint`** is an LLM-driven semantic audit. It reads `wiki/purpose.md`, samples pages across topics, and checks for contradictions, stale claims, missing concepts, orphan clusters, and duplicates. Writes findings to `wiki/lint-{date}.md`.
 

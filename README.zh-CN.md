@@ -45,7 +45,7 @@ bash setup.sh
 | 错题 | 只选上次答错的 |
 | 巩固 | 正确率不到 80% |
 
-HTML 嵌入了全量题库。点"再来一组"浏览器端重新抽题，不调 LLM，不刷新页面。做完后 session JSON 自动下载。后台跑 `python3 scripts/watch-sessions.py`，答题状态自动回流——同样零 LLM 成本。
+HTML 嵌入的是匹配你标签筛选的全部题目。点"再来一组"浏览器端从这批题里重新抽，不调 LLM，不刷新页面。做完后 session JSON 自动下载。后台跑 `python3 scripts/watch-sessions.py`，答题状态自动回流——同样零 LLM 成本。
 
 **`/lint`** LLM 驱动的语义审计。读 `wiki/purpose.md`，跨主题采样笔记，检查矛盾、过时说法、缺失概念、孤立群组和重复内容。结果写入 `wiki/lint-{date}.md`。
 
