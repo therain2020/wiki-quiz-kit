@@ -9,7 +9,7 @@ A personal knowledge system that treats your notes like code. You capture raw ma
 This is not a standalone app or a library you install with pip. It is a **project template** for an LLM-powered knowledge workflow. To use it:
 
 - **An AI coding agent.** Claude Code, Codex CLI, or anything that reads files, runs LLM prompts from templates, and writes output files. The three slash commands (`/ingest`, `/review`, `/lint`) are Claude Code skills that ship in this repo.
-- **An LLM API key.** Any provider works — DeepSeek, Claude API, OpenAI, etc. The prompt templates are model-agnostic. Set your key the way your agent expects.
+- **An LLM API key.** Any provider works: DeepSeek, Claude API, OpenAI, etc. The prompt templates are model-agnostic. Set your key the way your agent expects.
 - **Obsidian.** Open this folder as an Obsidian Vault. That is your IDE for browsing, editing, and linking notes. The frontmatter schemas and wikilinks are Obsidian-native.
 - **Python 3.** All tooling scripts run on Python 3 (macOS has it, Windows needs `winget install python3`).
 
@@ -29,7 +29,7 @@ Open the folder in Obsidian as a Vault. In Claude Code (or your agent), run:
 /ingest https://youtu.be/vz3Z2XETpGM
 ```
 
-This pulls in a YouTube video, extracts the transcript, runs a two-step chain-of-thought analysis, generates structured notes, and writes quiz questions. One confirmation, everything else automatic. When it finishes, try `/review` to quiz yourself on what you just learned.
+It extracts the transcript, runs a two-step chain-of-thought analysis, generates structured notes, and writes quiz questions. You confirm once. When it finishes, try `/review` to quiz yourself on what you just learned.
 
 ## What the slash commands do
 
@@ -68,7 +68,7 @@ wiki/purpose.md    ──→ read by all LLM operations
 wiki/overview.md   ←── regenerated after each /ingest
 ```
 
-Knowledge flows one way: URL → raw → wiki → permanent notes → questions → quiz. Quiz results loop back through sessions into state, which feeds the next quiz selection.
+URL → raw → wiki → permanent notes → questions → quiz. Quiz results loop back through sessions into state, which feeds the next quiz selection.
 
 ## Quality assurance
 
@@ -118,7 +118,7 @@ python3 scripts/eval-llm.py --verbose
 | `scripts/` | Python tooling (cross-platform) | tracked |
 | `.claude/skills/` | Claude Code slash command definitions | tracked |
 
-Knowledge and quiz data are gitignored by default. If you want to sync across devices, unignore `raw/`, `wiki/`, and `questions/` in `.gitignore` — but use a private repo.
+Knowledge and quiz data are gitignored by default. To sync across devices, unignore `raw/`, `wiki/`, and `questions/` in `.gitignore`. Use a private repo if you push to GitHub.
 
 ## License
 

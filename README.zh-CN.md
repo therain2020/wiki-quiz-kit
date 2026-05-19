@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-把笔记当成代码管——你捕获原始材料，LLM 把它们编译成结构化 wiki 页面和测验题，健康检查脚本保证一切不乱。你用 Obsidian 浏览和编辑，用 Claude Code 的斜杠命令驱动整个流程。
+把笔记当成代码管。你捕获原始材料，LLM 编译成结构化 wiki 页面和测验题，健康检查脚本保证不乱。Obsidian 浏览编辑，Claude Code 斜杠命令驱动一切。
 
 ## 你需要什么
 
@@ -10,7 +10,7 @@
 
 - **一个 AI coding agent。** Claude Code、Codex CLI，任何能读文件、按模板调 LLM、写输出文件的 agent 都行。项目里的三个斜杠命令（`/ingest`、`/review`、`/lint`）就是 Claude Code 的 skill，代码在 `.claude/skills/` 里。
 - **一个 LLM API key。** 随便哪个 provider——DeepSeek、Claude API、OpenAI 都行。prompt 模板跟模型无关。按你 agent 要求的方式配好 key 就行。
-- **Obsidian。** 把项目文件夹当成 Obsidian Vault 打开。它是你浏览、编辑、链接笔记的 IDE。frontmatter schema 和 wikilink 都是 Obsidian 原生支持的。
+- **Obsidian。** 把项目文件夹当成 Obsidian Vault 打开，用来浏览、编辑、链接笔记。frontmatter schema 和 wikilink 都是 Obsidian 原生支持的。
 - **Python 3。** 所有工具脚本都是 Python 3 写的。macOS 自带，Windows 上 `winget install python3` 一行搞定。
 
 ## 快速开始
@@ -118,7 +118,7 @@ python3 scripts/eval-llm.py --verbose
 | `scripts/` | Python 工具脚本（跨平台） | tracked |
 | `.claude/skills/` | Claude Code 斜杠命令定义 | tracked |
 
-知识和题库默认 gitignore。想跨设备同步的话，在 `.gitignore` 里取消 `raw/`、`wiki/`、`questions/` 的忽略——但记得用**私人仓库**。
+知识和题库默认 gitignore。想跨设备同步，在 `.gitignore` 里取消 `raw/`、`wiki/`、`questions/` 的忽略。如果要推 GitHub，用私人仓库。
 
 ## License
 
