@@ -1,24 +1,28 @@
-# 题库索引
+---
+type: index
+created: "2026-05-19"
+modified: "2026-05-19"
+---
 
-> 静态内容索引。题目状态见 `state/` 目录。
+# Question Index
 
-## 使用说明
+> Static content index. Question state is stored in `state/` directory.
+> Maintained by `/ingest` Stage 5.5. `/review` reads this file to enumerate available topics.
 
-本文件由 `/ingest` Stage 5.5 自动维护，按 topic 分组列出所有题目。
-`/review` 通过此文件枚举可用 topic，选题逻辑查询 `state/` 获取答题状态。
+## Statistics
 
-## 题目统计
+| Topic | Count |
+|-------|-------|
+| llm | 7 |
 
-| 主题 | 题目数 | 
-|------|--------|
-| _(空)_ | 0 |
+## llm
 
-<!-- 
-  格式说明:
-  每个 topic 一个二级标题，下方表格列出该 topic 的全部题目
-  
-  ## {topic}
-  | ID | 难度 | 来源 |
-  |----|------|------|
-  | fde-kpi-1 | medium | fde-kpi-is-contract-growth-not-cost-reduction |
--->
+| ID | Difficulty | Sources |
+|----|-----------|---------|
+| llm-llama-index-overview-1 | easy | llama-index-overview, llama-index |
+| llm-llama-index-overview-2 | easy | llama-index-overview, llama-index |
+| llm-llama-index-overview-3 | medium | llama-index-overview, llama-index |
+| llm-llama-index-overview-4 | medium | llama-index-overview, rag-retrieval |
+| llm-llama-index-overview-5 | medium | llama-index-overview, vector-index |
+| llm-llama-index-overview-6 | medium | llama-index-overview, data-connectors |
+| llm-llama-index-overview-7 | hard | llama-index-overview, llama-index, rag-retrieval |

@@ -12,22 +12,27 @@ modified: "2026-05-19"
 
 | Metric | Count |
 |--------|-------|
-| Permanent notes | 0 |
-| Literature notes | 0 |
-| Questions | 0 |
-| Topics | 0 |
+| Permanent notes | 5 |
+| Literature notes | 1 |
+| Questions | 7 |
+| Topics | 1 |
+| MOCs | 1 |
 
 ## Topic Coverage
 
 | Topic | Notes | Questions | Mastery |
 |-------|-------|-----------|---------|
-| _(none yet)_ | - | - | - |
+| llm | 6 | 7 | new |
 
 ## Recent Activity
 
-_(last 5 log entries)_
+1. **2026-05-19** — `/ingest` What is LLM Llama Index ? → 5 permanent notes + 7 questions + llm MOC
+2. _(end of history)_
 
 ## Knowledge Gaps
 
-_Concepts frequently linked but lacking independent pages._
-_Topics with quiz accuracy below 40%._
+- **LangChain** — frequently referenced as comparison point to LlamaIndex, no dedicated note
+- **Embedding models** — prerequisite for understanding vector indices, no note
+- **Vector databases** (Pinecone, Weaviate, Chroma) — storage layer behind vector indices, no note
+- **Chunking strategies** — how to split documents for indexing, no note
+- **RAG evaluation metrics** (faithfulness, relevancy, context precision) — no note

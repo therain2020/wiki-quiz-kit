@@ -1,41 +1,52 @@
-# Obsidian workspace state (device-specific, changes constantly)
-.obsidian/workspace.json
-.obsidian/workspace-mobile.json
-.obsidian/workspaces.json
+# ============================================================
+# DEFAULT: knowledge, quiz data, and Obsidian config are LOCAL
+# These contain personal knowledge, answer history, and
+# device-specific settings. They are NOT tracked by default.
+#
+# If you want to track these (e.g., to sync across devices),
+# remove or comment out the relevant lines below.
+#
+# >>> WARNING <<<
+# If you unignore raw/, wiki/, or questions/ AND push to GitHub,
+# your personal knowledge and quiz data will be PUBLIC.
+# We strongly recommend using a PRIVATE repository.
+# ============================================================
 
-# Plugin binaries and themes
-.obsidian/plugins/
-.obsidian/themes/
-.obsidian/snippets/
+# ── Knowledge Vault (personal) ──────────────────────────
+raw/
+wiki/
 
-# Obsidian cache
-.obsidian/cache/
+# ── Quiz Bank (personal) ────────────────────────────────
+questions/
 
-# Trash
+# ── Obsidian Config (device-specific) ───────────────────
+.obsidian/
+
+# ── Trash ───────────────────────────────────────────────
 .trash/
 
-# OS artifacts
+# ── OS artifacts ────────────────────────────────────────
 .DS_Store
 Thumbs.db
 *.tmp
 
-# Compile state (local only)
+# ── Compile state (local only) ──────────────────────────
 scripts/.compile-state.json
 
-# Claude Code local settings (may contain personal paths/tokens)
+# ── Claude Code local settings (may contain personal paths/tokens)
 .claude/settings.local.json
 
-# MCP server logs (contain local paths)
+# ── MCP server logs (contain local paths) ───────────────
 logs/
 
-# Generated quiz HTML (local only)
+# ── Generated quiz HTML (local only) ────────────────────
 output/
 
-# Quiz state (personal, derived from sessions/)
+# ── Quiz state (personal, derived from sessions/) ───────
 state/
 
-# Quiz session WAL (personal answer history)
+# ── Quiz session WAL (personal answer history) ──────────
 sessions/
 
-# M2M ephemeral (drafts, intermediate outputs)
+# ── M2M ephemeral (drafts, intermediate outputs) ────────
 temp/

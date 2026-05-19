@@ -305,6 +305,7 @@ When the user shares a video link (Douyin, YouTube, B站, etc.), follow this pri
 6. **Titles as statements** — prefer "X causes Y under condition Z" over "About X and Y"
 7. **When uncertain, stay in raw/** — if something might not warrant a permanent note, leave it in raw/ rather than polluting wiki/
 8. **Video content fidelity** — never summarize a video with a brief 1-2 sentence blurb. Video notes must preserve the full reasoning chain (core argument, supporting evidence, key data points) so the knowledge is independently usable without re-watching the original.
+9. **Git tracking default-off** — `raw/`, `wiki/`, `questions/`, `.obsidian/` are gitignored by default (they contain personal knowledge/quiz data). If the user asks to track these, warn them: pushing to GitHub will make their personal knowledge and answer history public. Recommend a private repository before un-ignoring.
 
 ## Key Files
 

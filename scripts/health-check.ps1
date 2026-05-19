@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$Strict,
     [switch]$Verbose,
     [switch]$Json
@@ -18,6 +18,8 @@ function Get-MarkdownFiles {
         $_.FullName -notmatch '[\\/]\.trash[\\/]' -and
         $_.FullName -notmatch '[\\/]templates[\\/]' -and
         $_.FullName -notmatch '[\\/]prompts[\\/]' -and
+        $_.FullName -notmatch '[\\/]evals[\\/]' -and
+        $_.FullName -notmatch '[\\/]\.claude[\\/]skills[\\/]' -and
         $_.DirectoryName -ne $vaultRoot
     }
 }
@@ -47,7 +49,9 @@ function Get-Frontmatter {
             if ($line -match '^(\w[\w-]*):\s*(.*)') {
                 $key = $matches[1]
                 $val = $matches[2].Trim()
-                $fm[$key] = if ($val -eq '' -or $val -eq '[]') { '' } else { $val }
+                # Strip YAML quotes from string values
+                $val = $val -replace '^"(.+)"$', '$1' -replace "^'(.+)'$", '$1'
+                $fm[$key] = if ($val -eq '') { '' } else { $val }
             }
         }
     }
@@ -294,7 +298,7 @@ function Test-QuestionBank {
         }
 
         # Count options (A. B. C. D. lines)
-        $optMatches = [regex]::Matches($content, '^[A-D]\.\s')
+        $optMatches = [regex]::Matches($content, '^[A-D]\.\s', [System.Text.RegularExpressions.RegexOptions]::Multiline)
         if ($optMatches.Count -lt 2) {
             $result += @{ Type="error"; Check="question-bank"; File=(Get-RelativePath $file.FullName)
                            Message="Fewer than 2 options found (got $($optMatches.Count))" }
@@ -350,6 +354,8 @@ function Test-QuestionBank {
             $idxId = $m.Groups[1].Value.Trim()
             # Skip table headers, separators, and non-ID text
             if ($idxId -notmatch '^[a-zA-Z0-9][\w-]+$') { continue }
+            if ($idxId -in @('ID', 'Topic', 'Count', 'Difficulty', 'Sources', 'Source')) { continue }
+            if ($indexTopics.ContainsKey($idxId)) { continue }
             $indexListedIds[$idxId] = $true
         }
         foreach ($t in $topics.GetEnumerator()) {
