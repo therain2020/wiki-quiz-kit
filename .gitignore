@@ -50,3 +50,5 @@ sessions/
 
 # ── M2M ephemeral (drafts, intermediate outputs) ────────
 temp/
+
+__pycache__/

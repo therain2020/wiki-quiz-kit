@@ -221,20 +221,14 @@ When the user says "compile this" or points to a raw/ file:
 
 ### 6. Quiz Review
 When the user says "复习", "出题", "quiz", or "review":
-1. Read `questions/bank.json` to load all questions in a single read (avoids per-file I/O)
-2. Read `questions/INDEX.md` to enumerate available topics
-3. Read `state/*.json` to get each question's attempt history (questions without state are "new")
-4. Select questions based on mode:
-   - `default` — 40% new + 30% weak (low accuracy) + 30% random
-   - `new` — only unattempted questions
-   - `wrong` — only `last_result = "wrong"`
-   - `consolidate` — only attempted but accuracy < 80%
-   - `random` — pure random (legacy behavior)
-5. Default 10 questions, shuffle options within each question
-6. Read `.claude/skills/review/quiz-template.html` and replace placeholders including `{{SESSION_ID}}`, `{{SESSION_DATE}}`, `{{MODE}}`
-7. Write the rendered HTML to `output/quiz-[topic]-[date].html` and open in browser
-8. After quiz, user saves session JSON to `sessions/` (download button or clipboard), then says "记录结果"
-9. Claude parses session JSON, concurrently updates `state/*.json` files, verifies all writes succeeded
+1. Parse user intent into CLI args: topic tags, count, mode, difficulty
+2. Run `python3 scripts/quiz-gen.py --tags <topic> --count <n> --mode <mode>` — zero LLM cost
+   - `--mode random` (default): pure random from bank.json
+   - `--mode new`: only unattempted questions
+   - `--mode wrong`: only `last_result = "wrong"`
+   - `--mode consolidate`: accuracy < 80%
+3. Script reads bank.json, state/*.json, renders HTML, opens browser
+4. After quiz, session JSON auto-downloads. State auto-updates via `watch-sessions.py`
 
 ### 3. Health Check (Tier 1 — deterministic)
 When the user says "health check" or "check my vault":
@@ -327,6 +321,9 @@ When the user shares a video link (Douyin, YouTube, B站, etc.), follow this pri
 | `scripts/compile.py` | Incremental compilation + quiz dependency, cross-platform |
 | `scripts/eval.py` | Deterministic eval runner, cross-platform |
 | `scripts/eval-llm.py` | LLM-driven q-gen validation, cross-platform |
+| `scripts/quiz-gen.py` | Quiz HTML generator from bank.json, zero LLM cost |
+| `scripts/update-state.py` | Session replay → state/*.json, zero LLM cost |
+| `scripts/watch-sessions.py` | Background watcher: auto-update state on quiz session download |
 | `.claude/skills/ingest/SKILL.md` | Knowledge ingestion pipeline (two-step CoT) |
 | `.claude/skills/review/SKILL.md` | Interactive quiz generator |
 | `.claude/skills/lint/SKILL.md` | LLM semantic wiki audit |

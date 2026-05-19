@@ -167,17 +167,64 @@
 </div>
 
 <script>
-var Q = {{QUESTIONS_JSON}};
+var BANK = {{BANK_JSON}};
+var PICK = {{TOTAL}};
+if (PICK > BANK.length) PICK = BANK.length;
+
+function shuffle(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+function pickRandom(bank, n) {
+  var pool = shuffle(bank.slice()).slice(0, n);
+  return pool.map(function(q) {
+    var opts = q.options.slice();
+    var correct = q.answer;
+    var paired = opts.map(function(o, i) { return {text: o, idx: i}; });
+    shuffle(paired);
+    var answer = paired.findIndex(function(p) { return p.idx === correct; });
+    return {
+      id: q.id, topic: q.topic,
+      question: q.question,
+      options: paired.map(function(p) { return p.text; }),
+      answer: answer,
+      explanation: q.explanation,
+      source: q.source || (q.sources && q.sources[0]) || ''
+    };
+  });
+}
+
+var Q = pickRandom(BANK, PICK);
 var TOTAL = Q.length;
 var STORAGE = 'quiz-{{QUIZ_SLUG}}';
 var SESSION_ID = '{{SESSION_ID}}';
 var SESSION_DATE = '{{SESSION_DATE}}';
 var MODE = '{{MODE}}';
 
-var state = { idx:0, answers:{}, done:false };
+var state = { idx:0, answers:{}, done:false, ids:[] };
 
-function loadState(){ try{return JSON.parse(localStorage.getItem(STORAGE))||state}catch(e){return state;} }
-function saveState(){ localStorage.setItem(STORAGE, JSON.stringify(state)); }
+function loadState(){
+  try{
+    var s = JSON.parse(localStorage.getItem(STORAGE)) || state;
+    // Verify stored question IDs match current Q — otherwise stale
+    if (s.ids && s.ids.length === TOTAL) {
+      for (var i = 0; i < TOTAL; i++) {
+        if (s.ids[i] !== Q[i].id) { s = state; break; }
+      }
+    } else if (s.ids && s.ids.length !== TOTAL) {
+      s = state;
+    }
+    return s;
+  }catch(e){ return state; }
+}
+function saveState(){
+  state.ids = Q.map(function(q){ return q.id; });
+  localStorage.setItem(STORAGE, JSON.stringify(state));
+}
 
 function toggleTheme(){
   var h = document.documentElement;
@@ -287,13 +334,33 @@ function showFinish(){
   document.getElementById('finish').innerHTML=h;
   document.getElementById('dots').innerHTML='';
   document.getElementById('pos-label').textContent='';
-  // Auto-copy session JSON to clipboard
+  // Auto-download + copy session JSON
+  downloadSession();
   copySession().then(function(){
-    document.getElementById('copy-status').textContent='已复制到剪贴板 ✓';
+    document.getElementById('copy-status').textContent = '已下载到本地并复制到剪贴板 ✓';
   });
 }
 
-function restart(){ localStorage.removeItem(STORAGE); location.reload(); }
+function restart(){
+  downloadSession();
+  Q = pickRandom(BANK, PICK);
+  TOTAL = Q.length;
+  state = { idx: 0, answers: {}, done: false, ids: [] };
+  saveState();
+  renderDots();
+  renderCard();
+  document.getElementById('finish').style.display = 'none';
+  document.getElementById('counter').textContent = '0/' + TOTAL;
+}
+
+function downloadSession(){
+  var s = buildSession();
+  var blob = new Blob([JSON.stringify(s, null, 2)], {type: 'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'quiz-session-' + SESSION_DATE.replace(/:/g, '-') + '.json';
+  a.click();
+}
 
 function buildSession(){
   var answers=[];
@@ -317,12 +384,6 @@ function copySession(){
   var t=localStorage.getItem('plan-theme');
   if(t) document.documentElement.dataset.theme=t;
   state=loadState();
-  // Reset state if question count changed (new quiz)
-  if(Object.keys(state.answers).length>0){
-    var oldTotal=0;
-    for(var k in state.answers){ var idx=parseInt(k); if(idx>=oldTotal) oldTotal=idx+1; }
-    if(oldTotal !== TOTAL){ state={idx:0,answers:{},done:false}; saveState(); }
-  }
   renderDots();
   renderCard();
 })();
