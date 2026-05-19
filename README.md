@@ -1,73 +1,138 @@
 # wiki-quiz-kit
 
-> **Wiki + Quiz：知识库 × 刷题复习，一体化的 AI 原生知识系统**
->
-> `/ingest` 一键摄入 → wiki 结构化 → 自动出题 → `/review` 交互刷题
-> 确定性 Guardrails · Eval Driven Development · 抽象化管道 · CLI 即 API
+Treats your notes like a software project: raw source files, compiler passes, build outputs, CI checks, and automated testing. Two Claude Code slash commands drive everything. `/ingest` pulls knowledge in, `/review` quizzes you on it.
 
----
+## What it does
 
-## 一眼看出我的能力
+**`/ingest`** takes a URL (video or article), extracts the content, and runs it through 8 LLM prompt templates to produce structured notes. One confirmation point, everything else automatic. For videos, it prefers transcripts (YouTube auto-captions) over descriptions. More detail, closer to the source.
 
-| 维度 | 能力 | 证据 |
-|------|------|------|
-| **Wiki** | LLM 作为编译器驱动 | 8 个 prompt 模板构成编译器管道，raw/ → wiki/ 全自动 |
-| | Prompt Engineering 作为工程学科 | 每种 raw 类型对应独立 prompt，可单独调试、替换、A/B 测试 |
-| | AI Agent 自主执行 | `/ingest` 管道 7 阶段全自动，URL 进去→结构化知识出来，1 个人工确认点 |
-| | 确定性 Guardrails | 7 项纯规则检查，不调 LLM。正则+路径解析+字段校验，硬约束在代码里 |
-| | Eval Driven Development | Golden cases + eval runner，compile 末尾自动触发 eval gate |
-| | 抽象化循环 | raw/ 碎石路 → prompts/ + templates/ 高速公路 |
-| **Quiz** | 摄入即出题 | `/ingest` Stage 5.5 自动从新内容生成复习题到 `questions/`，含 prompt 校验 |
-| | 交互式测验 | `/review` 选题→渲染 HTML，纸墨质感设计，支持智能选题（新题/错题/薄弱/巩固） |
-| | 答题状态追踪 | `sessions/` 记录每次答题 WAL，`state/` 并发更新每题正确率，支持状态回流 |
-| | CLI 即 Agent 接口 | 所有脚本 `-Json` 输出，符合 Schema，可直接被 MCP server/Agent 消费 |
+**`/review`** picks questions from your question bank, renders an HTML quiz, and tracks your answers. After you finish, it copies the session results to your clipboard. Paste them into Claude, and your per-question stats (attempts, correct, wrong) get updated. Next time you ask for a quiz, it weighs new questions, weak topics, and past mistakes differently.
 
-## 架构
+The quiz has five selection modes:
+
+| Mode | What it picks |
+|------|---------------|
+| default | 40% new, 30% weak, 30% random |
+| new | questions you have never seen |
+| wrong | questions you got wrong last time |
+| consolidate | attempted but accuracy below 80% |
+| random | anything |
+
+## Architecture
 
 ```
-                     Claude Code (编译器驱动)
-                           │
-raw/ ──→ [prompts/ 8个编译器Pass] ──→ wiki/ ──→ health-check.ps1
-  │                                      │            │
-  │    questions/ ←── ingest auto-gen ──┘      7项确定性检查
-  │         │
-  │    .claude/skills/review/
-  │         │
-  │    output/quiz-*.html ──→ sessions/ ──→ state/
-  └────────────────────────────────────────────┘
-              (交互刷题 + 状态回流)
+raw/ (source files)  ──→  prompts/ (8 compiler passes)  ──→  wiki/ (build output)
+                               ↑
+                          Claude Code
+
+questions/  ──→  .claude/skills/review/  ──→  output/ (quiz HTML)
+    ↑                                              │
+    │                                        session JSON
+    │                                              │
+    └───  state/  ←────  sessions/  ←─────────────┘
+         (per-question stats)   (answer WAL)
 ```
 
-> `/ingest` 读完文章/视频 → 自动出题。`/review` 随时刷题复习。wiki 和 quiz 是一个闭环。
+Knowledge moves in one direction through the pipeline: URL → raw → wiki → permanent notes → questions → quiz. The quiz results loop back through sessions into state, which feeds into the next quiz selection.
 
-## 文件清单
+## How it maps to software engineering
 
+| Software | Knowledge |
+|----------|-----------|
+| `src/` | `raw/` -- unprocessed capture |
+| `build/` | `wiki/` -- structured output |
+| compiler | LLM + `prompts/` templates |
+| IDE | Obsidian |
+| CI/lint | `health-check.ps1` -- 7 deterministic checks |
+| incremental build | `compile.ps1` -- change detection |
+
+## Health checks (all deterministic, no LLM)
+
+`health-check.ps1` runs 7 checks against your vault:
+
+1. Broken wiki-links
+2. Orphan notes (permanent notes with no incoming links, older than 24h)
+3. Empty files (frontmatter only, no body)
+4. Frontmatter consistency (required fields per note type)
+5. Symmetric links (A links to B but B does not link back, `-Strict` only)
+6. Question bank integrity (format validation, per-topic counts, source links, INDEX consistency)
+7. State integrity (session vs state drift detection, cross-link validation)
+
+All scripts support `-Json` output with a documented JSON Schema, so agents and MCP servers can consume results directly.
+
+## Data directories
+
+| Directory | Purpose | Git |
+|-----------|---------|-----|
+| `raw/` | Source materials, never deleted | tracked |
+| `wiki/` | Structured notes (permanent, literature, daily, MOC) | tracked |
+| `questions/` | Quiz questions with frontmatter | tracked |
+| `state/` | Per-question attempt stats (derived from sessions) | ignored |
+| `sessions/` | Raw quiz answer logs, append-only WAL | ignored |
+| `temp/` | Intermediate outputs, question drafts | ignored |
+| `output/` | Generated quiz HTML | ignored |
+| `prompts/` | 8 LLM compiler prompt templates | tracked |
+| `templates/` | 7 Obsidian note templates | tracked |
+| `scripts/` | PowerShell tooling | tracked |
+| `evals/` | Golden test cases | tracked |
+
+## Question format
+
+Each question is a `.md` file with YAML frontmatter:
+
+```yaml
+type: question
+id: fde-kpi-is-contract-growth-1
+topic: FDE
+difficulty: medium
+source: fde-kpi-is-contract-growth-not-cost-reduction
+deprecated: false
+created: "2026-05-19"
 ```
-scripts/
-├── health-check.ps1              # CI：7 项确定性检查
-├── health-check-schema.json      # MCP-ready JSON Schema
-├── compile.ps1                   # 增量编译：hash 变更 + prompt 自动映射
-└── eval.ps1                      # Eval runner：compile 末尾自动触发 gate
-prompts/                          # 8 个 LLM 编译器 Pass（可替换可A/B）
-templates/                        # 抽象产物：7 种笔记模板
-evals/cases/sample/               # 示例 Golden Case
-.claude/skills/
-├── ingest/SKILL.md               # AI Agent：7 阶段全自动知识摄入
-└── review/
-    ├── SKILL.md                  # 交互式测验生成器
-    └── quiz-template.html        # 纸墨质感测验模板
-setup.ps1                         # 30 秒初始化
-raw/ wiki/ questions/ state/ sessions/ temp/ output/     # 数据目录
+
+The body uses a fixed format that `/review` and `health-check.ps1` both parse:
+
+```markdown
+# What is the core KPI of the FDE strategy?
+
+A. Lower customization costs
+B. Contract revenue growth
+C. Increase user activity
+D. Reduce marginal costs
+
+**答案:** B
+
+**解析:** FDE measures success by contract revenue growth, not cost reduction.
 ```
 
-## 30 秒开始
+Question state (attempts, correct, wrong) lives in `state/{id}.json`, not in the question file. When a question's source note changes, the old question gets `deprecated: true` and a new one is generated. The old stats stay.
+
+## Quick start
 
 ```powershell
 git clone https://github.com/therain2020/wiki-quiz-kit.git my-kb
-cd my-kb; .\setup.ps1              # 一键初始化
+cd my-kb
+.\setup.ps1
 ```
 
-用 Obsidian 打开文件夹作为 Vault。往 `raw/inbox/` 扔想法，`/ingest <URL>` 摄入文章视频（自动出题），`/review` 刷题复习。
+Open the folder in Obsidian as a Vault. Drop thoughts into `raw/inbox/`, use `/ingest <URL>` to pull in articles and videos, use `/review` to quiz yourself.
+
+## Scripts
+
+```powershell
+.\scripts\health-check.ps1            # 7 checks, no LLM
+.\scripts\health-check.ps1 -Strict    # with symmetric link check
+.\scripts\health-check.ps1 -Verbose   # per-issue details
+.\scripts\health-check.ps1 -Json      # machine-readable output
+
+.\scripts\compile.ps1                 # incremental scan
+.\scripts\compile.ps1 -Full           # treat all files as changed
+.\scripts\compile.ps1 -WhatIf         # dry run
+.\scripts\compile.ps1 -Interactive    # step through each file
+
+.\scripts\eval.ps1 -Verbose           # deterministic eval gate
+.\scripts\eval-llm.ps1 -Verbose       # LLM-driven question generation eval
+```
 
 ## License
 
