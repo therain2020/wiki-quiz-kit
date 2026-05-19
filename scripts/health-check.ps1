@@ -166,14 +166,16 @@ function Test-EmptyFiles {
 
 $requiredFields = @{
     "permanent"  = @("type", "tags", "created")
-    "literature" = @("type", "source", "created")
+    "literature" = @("type", "sources", "created")
     "daily"      = @("type", "created")
     "moc"        = @("type", "tags", "created")
     "fleeting"   = @("type", "created")
     "meeting"    = @("type", "date")
-    "video"      = @("type", "source", "created")
-    "article"    = @("type", "source", "created")
-    "question"   = @("type", "topic", "source", "difficulty", "created")
+    "video"      = @("type", "sources", "created")
+    "article"    = @("type", "sources", "created")
+    "question"   = @("type", "topic", "sources", "difficulty", "created")
+    "log"        = @("type", "created")
+    "lint"       = @("type", "date")
 }
 
 function Test-Frontmatter {
@@ -298,18 +300,28 @@ function Test-QuestionBank {
                            Message="Fewer than 2 options found (got $($optMatches.Count))" }
         }
 
-        # Source link check
+        # Source link check (supports sources: array and legacy source: string)
         $isDeprecated = ($fm.ContainsKey('deprecated') -and $fm['deprecated'] -eq 'true')
-        $source = if ($fm.ContainsKey('source')) { $fm['source'] } else { $null }
-        if ($source) {
+        $srcList = @()
+        if ($fm.ContainsKey('sources') -and $fm['sources']) {
+            $raw = $fm['sources']
+            if ($raw -match '^\[(.+)\]$') {
+                $srcList = $matches[1] -split ',\s*' | ForEach-Object { $_ -replace '["\s]', '' } | Where-Object { $_ }
+            } else {
+                $srcList = @($raw.Trim())
+            }
+        } elseif ($fm.ContainsKey('source') -and $fm['source']) {
+            $srcList = @($fm['source'].Trim())
+        }
+        foreach ($src in $srcList) {
             $wikiFound = $false
             foreach ($dir in @('wiki/permanent', 'wiki/literature')) {
-                if (Test-Path (Join-Path $vaultRoot "$dir/$source.md")) { $wikiFound = $true; break }
+                if (Test-Path (Join-Path $vaultRoot "$dir/$src.md")) { $wikiFound = $true; break }
             }
             if (-not $wikiFound) {
                 $level = if ($isDeprecated) { "info" } else { "error" }
                 $result += @{ Type=$level; Check="question-bank"; File=(Get-RelativePath $file.FullName)
-                               Message="Source '$source' not found in wiki/. $(
+                               Message="Source '$src' not found in wiki/. $(
                                    if($isDeprecated){'(deprecated question — review is skipped)'}else{''})" }
             }
         }
@@ -478,6 +490,42 @@ function Test-StateIntegrity {
     return $result
 }
 
+# ── Check 8: Log Integrity ───────────────────────────────
+
+function Test-LogIntegrity {
+    $result = @()
+    $logFile = Join-Path $vaultRoot "wiki/log.md"
+    if (-not (Test-Path $logFile)) {
+        $result += @{ Type="warning"; Check="log-integrity"; File="wiki/log.md"
+                       Message="log.md does not exist. Operations are not being logged." }
+        return $result
+    }
+    $logContent = Get-Content -Path $logFile -Raw -Encoding UTF8
+    $entries = [regex]::Matches($logContent, '^##\s*\[([^\]]+)\]\s*(\w+)\s*\|', [System.Text.RegularExpressions.RegexOptions]::Multiline)
+    if ($entries.Count -eq 0) {
+        $result += @{ Type="warning"; Check="log-integrity"; File="wiki/log.md"
+                       Message="No log entries found (expected format: ## [YYYY-MM-DD HH:MM] operation | detail)" }
+        return $result
+    }
+    # Check chronological order
+    $prevDate = [DateTime]::MinValue
+    foreach ($entry in $entries) {
+        $dateStr = $entry.Groups[1].Value.Trim()
+        try {
+            $curDate = [DateTime]::ParseExact($dateStr, 'yyyy-MM-dd HH:mm', $null)
+            if ($curDate -lt $prevDate) {
+                $result += @{ Type="warning"; Check="log-integrity"; File="wiki/log.md"
+                               Message="Log entry '$dateStr' is out of chronological order" }
+            }
+            $prevDate = $curDate
+        } catch {
+            $result += @{ Type="warning"; Check="log-integrity"; File="wiki/log.md"
+                           Message="Could not parse date from entry: '$dateStr'" }
+        }
+    }
+    return $result
+}
+
 # ── Main ────────────────────────────────────────────────
 
 Write-Host "=== Knowledge Base Health Check ===" -ForegroundColor Cyan
@@ -487,46 +535,51 @@ $allErrors = @()
 $allWarnings = @()
 
 # Run checks
-Write-Host "[1/7] Broken Wiki-Links ............... " -NoNewline
+Write-Host "[1/8] Broken Wiki-Links ............... " -NoNewline
 $r1 = Test-BrokenLinks
 $allErrors += $r1
 Write-Host "$($r1.Count) issues" -ForegroundColor $(if ($r1.Count -gt 0) { 'Red' } else { 'Green' })
 
-Write-Host "[2/7] Orphan Notes .................... " -NoNewline
+Write-Host "[2/8] Orphan Notes .................... " -NoNewline
 $r2 = Test-OrphanNotes
 $allWarnings += $r2
 Write-Host "$($r2.Count) issues" -ForegroundColor $(if ($r2.Count -gt 0) { 'Yellow' } else { 'Green' })
 
-Write-Host "[3/7] Empty Files ..................... " -NoNewline
+Write-Host "[3/8] Empty Files ..................... " -NoNewline
 $r3 = Test-EmptyFiles
 $allErrors += $r3
 Write-Host "$($r3.Count) issues" -ForegroundColor $(if ($r3.Count -gt 0) { 'Red' } else { 'Green' })
 
-Write-Host "[4/7] Frontmatter Consistency ......... " -NoNewline
+Write-Host "[4/8] Frontmatter Consistency ......... " -NoNewline
 $r4 = Test-Frontmatter
 $allErrors += $r4
 Write-Host "$($r4.Count) issues" -ForegroundColor $(if ($r4.Count -gt 0) { 'Red' } else { 'Green' })
 
 if ($Strict) {
-    Write-Host "[5/7] Symmetric Links ................. " -NoNewline
+    Write-Host "[5/8] Symmetric Links ................. " -NoNewline
     $r5 = Test-SymmetricLinks
     $allWarnings += $r5
     Write-Host "$($r5.Count) issues" -ForegroundColor $(if ($r5.Count -gt 0) { 'Yellow' } else { 'Green' })
 } else {
-    Write-Host "[5/7] Symmetric Links ................. skipped (use -Strict)" -ForegroundColor DarkGray
+    Write-Host "[5/8] Symmetric Links ................. skipped (use -Strict)" -ForegroundColor DarkGray
 }
 
-Write-Host "[6/7] Question Bank Integrity ......... " -NoNewline
+Write-Host "[6/8] Question Bank Integrity ......... " -NoNewline
 $r6 = Test-QuestionBank
 $allErrors += ($r6 | Where-Object { $_.Type -eq 'error' })
 $allWarnings += ($r6 | Where-Object { $_.Type -eq 'warning' })
 Write-Host "$($r6.Count) issues" -ForegroundColor $(if ($r6.Count -gt 0) { 'Yellow' } else { 'Green' })
 
-Write-Host "[7/7] State Integrity ................. " -NoNewline
+Write-Host "[7/8] State Integrity ................. " -NoNewline
 $r7 = Test-StateIntegrity
 $allErrors += ($r7 | Where-Object { $_.Type -eq 'error' })
 $allWarnings += ($r7 | Where-Object { $_.Type -eq 'warning' })
 Write-Host "$($r7.Count) issues" -ForegroundColor $(if ($r7.Count -gt 0) { 'Yellow' } else { 'Green' })
+
+Write-Host "[8/8] Log Integrity ................... " -NoNewline
+$r8 = Test-LogIntegrity
+$allWarnings += $r8
+Write-Host "$($r8.Count) issues" -ForegroundColor $(if ($r8.Count -gt 0) { 'Yellow' } else { 'Green' })
 
 Write-Host ""
 

@@ -38,6 +38,10 @@ questions/ ──→ .claude/skills/review/ ──→ output/ (interactive quiz)
      │                                       │
      └── state/ ←────── sessions/ ←─────────┘
           (答题状态)      (答题记录WAL)
+
+wiki/log.md (操作日志)  ←── /ingest, /review, /lint
+wiki/purpose.md (方向)  ──→ read by all LLM operations
+wiki/overview.md (总览) ←── /ingest, /review maintain
 ```
 
 - **raw/:** Capture-first. Everything lands in `raw/inbox/`, gets triaged to subfolders.
@@ -48,7 +52,7 @@ questions/ ──→ .claude/skills/review/ ──→ output/ (interactive quiz)
 ## Common Commands
 
 ```powershell
-# Health check (7 checks: broken links, orphans, empty files, frontmatter, symmetric links, question bank, state integrity)
+# Health check (8 checks: broken links, orphans, empty files, frontmatter, symmetric links, question bank, state integrity, log integrity)
 .\scripts\health-check.ps1
 .\scripts\health-check.ps1 -Strict     # include symmetric link check
 .\scripts\health-check.ps1 -Verbose    # show per-issue details
@@ -86,9 +90,12 @@ questions/ ──→ .claude/skills/review/ ──→ output/ (interactive quiz)
 | `temp/` | M2M ephemeral — question drafts, intermediate outputs — gitignored |
 | `output/` | Generated quiz HTML — local only, gitignored |
 | `templates/` | Obsidian note templates (used by core Templates plugin) |
-| `prompts/` | LLM compiler prompt templates (8 passes) |
+| `prompts/` | LLM compiler prompt templates (9 passes: 7 raw→wiki + ingest-analysis + generate-questions) |
 | `scripts/` | PowerShell tooling |
-| `.claude/skills/` | Project-local Claude Code skills (ingest, review) |
+| `wiki/log.md` | Chronological operations log (ingest, review, lint entries) |
+| `wiki/purpose.md` | Directional intent — goals, key questions, scope, thesis |
+| `wiki/overview.md` | Auto-generated global summary (scale, topic coverage, gaps) |
+| `.claude/skills/` | Project-local Claude Code skills (ingest, review, lint) |
 
 ## Note Types & Frontmatter Schema
 
@@ -99,6 +106,7 @@ Every note must have YAML frontmatter with a `type` field:
 type: permanent
 tags: [...]
 aliases: [...]      # alternate titles for linking
+sources: []          # source note slugs that contributed
 created: "YYYY-MM-DD"
 modified: "YYYY-MM-DD"
 ```
@@ -106,8 +114,8 @@ modified: "YYYY-MM-DD"
 **Literature note** (`wiki/literature/`):
 ```yaml
 type: literature
-source: ""         # publication/site name
-source_url: ""
+sources: []          # source note slugs that contributed
+source_url: ""       # original URL of the source material
 author: ""
 tags: [...]
 created: "YYYY-MM-DD"
@@ -148,7 +156,7 @@ tags: [meeting]
 **Video note** (`raw/videos/`):
 ```yaml
 type: video
-source: ""             # platform + author, e.g. "抖音 @小天fotos"
+sources: []             # source note slugs that contributed
 source_url: ""         # original video URL
 mirror_url: ""         # mirror URL (YouTube, B站, etc.)
 transcript_url: ""     # URL used for transcript extraction (prefer transcript-capable platform)
@@ -166,7 +174,7 @@ type: question
 id: "{topic}-{slug}-{n}"   # unique question identifier
 topic: ""                   # primary topic tag for filtering
 difficulty: ""              # easy / medium / hard
-source: ""                  # source note slug (without path or extension)
+sources: []                # source note slugs that contributed
 deprecated: false           # optional, marks retired questions (/review skips)
 created: "YYYY-MM-DD"
 ```
@@ -216,14 +224,23 @@ When the user says "复习", "出题", "quiz", or "review":
 7. After quiz, user saves session JSON to `sessions/` (download button or clipboard), then says "记录结果"
 8. Claude parses session JSON, concurrently updates `state/*.json` files, verifies all writes succeeded
 
-### 3. Health Check
+### 3. Health Check (Tier 1 — deterministic)
 When the user says "health check" or "check my vault":
-1. Run `.\scripts\health-check.ps1 -Verbose` (7 checks: broken links, orphans, empty files, frontmatter, symmetric links, question bank with source-link+INDEX checks, state integrity with session/state→question link checks)
+1. Run `.\scripts\health-check.ps1 -Verbose` (8 checks including log integrity)
 2. Interpret the results in plain language
 3. For each error, explain what's broken and suggest the fix
 4. For orphans, suggest potential connection points
-5. For state integrity errors (check 7), identify which concurrent writes failed and suggest re-syncing from sessions/
-6. For question source broken links (check 6), identify which wiki notes were deleted and suggest regenerating questions
+5. For state integrity errors, identify which concurrent writes failed
+6. For source broken links, identify which wiki notes were deleted
+
+### 3b. Semantic Lint (Tier 2 — LLM-driven)
+When the user says "lint", "语义检查", "audit wiki":
+1. Read `wiki/purpose.md`, `wiki/overview.md`, `wiki/log.md`
+2. Sample wiki pages across topics
+3. Check: contradictions, stale claims, missing concepts, orphan clusters, duplicates
+4. Write `wiki/lint-{date}.md` report
+5. Append to `wiki/log.md`
+6. Present findings, ask which to fix
 
 ### 4. MOC Generation
 When the user says "create an MOC for X":
@@ -288,9 +305,14 @@ When the user shares a video link (Douyin, YouTube, B站, etc.), follow this pri
 | `prompts/video-to-literature.md` | Video → literature note |
 | `prompts/generate-moc.md` | Auto-generate Maps of Content |
 | `prompts/generate-questions.md` | Generate quiz questions from wiki notes |
-| `scripts/health-check.ps1` | Vault integrity auditor (7 checks) |
+| `prompts/ingest-analysis.md` | Two-step CoT analysis (Step 1 of ingest) |
+| `wiki/log.md` | Chronological operations log |
+| `wiki/purpose.md` | Wiki directional intent |
+| `wiki/overview.md` | Auto-generated global summary |
+| `scripts/health-check.ps1` | Vault integrity auditor (8 checks) |
 | `scripts/compile.ps1` | Incremental compilation driver + quiz dependency detection |
 | `scripts/eval.ps1` | Deterministic eval runner |
 | `scripts/eval-llm.ps1` | LLM-driven question generation eval |
-| `.claude/skills/ingest/SKILL.md` | One-click knowledge ingestion pipeline |
+| `.claude/skills/ingest/SKILL.md` | Knowledge ingestion pipeline (two-step CoT) |
 | `.claude/skills/review/SKILL.md` | Interactive quiz generator |
+| `.claude/skills/lint/SKILL.md` | LLM semantic wiki audit |

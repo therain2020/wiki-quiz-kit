@@ -39,6 +39,7 @@ Extract from user input:
 
 ### Step 2: Load question index and states
 
+Read `wiki/purpose.md` for review priority context (which topics matter most).
 Read `questions/INDEX.md` to enumerate available topics and question IDs.
 
 Read all `state/*.json` files to build in-memory state map:
@@ -109,6 +110,11 @@ When user says "记录结果" / "更新状态" and provides the session file or 
 3. Write all state files concurrently (one per question)
 4. Verify: re-read all written state files, confirm counts match expected
 5. Report: "Updated N question states. X correct, Y wrong this session. Overall accuracy: Z%."
+6. Append to `wiki/log.md`:
+   ```
+   ## [YYYY-MM-DD HH:MM] review | {topic} · {total} questions | {score}/{total}
+   ```
+7. Update `wiki/overview.md` mastery data for affected topics.
 
 If any state file write fails, report which ones and suggest re-running.
 

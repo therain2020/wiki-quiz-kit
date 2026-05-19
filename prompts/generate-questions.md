@@ -38,7 +38,7 @@ A JSON array of question objects. Write to `temp/draft-{slug}.json`:
 - **topic:** Use the primary topic tag from the source note. Be consistent — same topic string across questions in the same domain.
 - **id format:** `{topic}-{source-slug}-{n}` where n starts at 1 per source. Example: `fde-kpi-is-contract-growth-1`. When regenerating for an already-covered source, increment n beyond existing IDs.
 - **deprecated:** When regenerating questions, mark old questions (same source, same topic) with `deprecated: true` in frontmatter instead of deleting them. `/review` skips deprecated questions but old state history is preserved.
-- **source:** The filename slug of the source note (without path or extension).
+- **sources:** The filename slug of the source note (without path or extension).
 - **Do NOT invent content** not present in the source notes. If the notes don't support a good question, skip it.
 
 ## Question Quality Checklist

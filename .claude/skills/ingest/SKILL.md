@@ -13,8 +13,9 @@ Turn any URL (video, article) into structured, linked, health-checked knowledge 
 
 ```
 URL → [1] Multi-Source Extract → [2] Confirm → [3] Save raw/
-    → [4] Compile wiki/ → [5] Deepen permanent
-    → [5.5] Generate questions → [6] Update MOC → [7] Health check
+    → [4a] Analyze (CoT step 1) → [4b] Compile wiki/ (CoT step 2)
+    → [5] Deepen permanent → [5.5] Generate questions → [6] Update MOC
+    → [7] Log + Overview + Health check
 ```
 
 Only stage [2] requires human confirmation. Everything else is automated.
@@ -45,9 +46,19 @@ Save to appropriate directory:
 
 Raw files are **never deleted** — they are the audit trail (sandbox isolation).
 
-### Stage 4: Compile wiki/
+### Stage 4: Compile wiki/ (Two-Step Chain-of-Thought)
 
-Map source → prompt → output:
+Before starting, read `wiki/purpose.md` for directional context.
+
+**4a. Analysis (Step 1):**
+
+Read the source file + `wiki/purpose.md` + `wiki/overview.md` → apply `prompts/ingest-analysis.md` → write structured analysis to `temp/analysis-{slug}.json`.
+
+The analysis identifies entities, concepts, arguments, connections to existing wiki pages, contradictions, and structural recommendations. It does NOT write any wiki files.
+
+**4b. Generation (Step 2):**
+
+Read the source file + `temp/analysis-{slug}.json` + `wiki/purpose.md` → apply the appropriate compilation prompt from the table below → generate output with proper frontmatter and wikilinks. Use the analysis to produce more precise connections, better-targeted permanent notes, and well-calibrated questions.
 
 | Source Type | Prompt | Output |
 |------------|--------|--------|
@@ -57,8 +68,6 @@ Map source → prompt → output:
 | `raw/highlights/*.md` | `prompts/highlight-to-permanent.md` | `wiki/permanent/<slug>.md` |
 | `raw/meetings/*.md` | `prompts/meeting-to-notes.md` | polished meeting notes |
 | `raw/inbox/*.md` | `prompts/inbox-triage.md` | Classify first, then compile |
-
-Read the source file → read the prompt template → generate output with proper frontmatter and wikilinks.
 
 ### Stage 5: Deepen to Permanent
 
@@ -81,7 +90,7 @@ Uses `prompts/generate-questions.md` (8th compiler pass). Structured pipeline:
    id: {id}
    topic: {topic}
    difficulty: {difficulty}
-   source: {source}
+   sources: [{source}]
    created: "YYYY-MM-DD"
    ---
    # {question}
@@ -99,21 +108,27 @@ Uses `prompts/generate-questions.md` (8th compiler pass). Structured pipeline:
 
 Add new notes to relevant Maps of Content. Add to the relevant MOC in `wiki/moc/` or create a new MOC if needed.
 
-### Stage 7: Health Check
+### Stage 7: Finalize
 
-Run `scripts/health-check.ps1 -Verbose`. Report: broken links, orphans, empty files, frontmatter errors. Fix any issues.
+1. **Log:** Append to `wiki/log.md`:
+   ```
+   ## [YYYY-MM-DD HH:MM] ingest | {title}
+   ```
+2. **Overview:** Regenerate `wiki/overview.md` — read all wiki stats (note counts, topic coverage) and update the summary. Include recent activity from the last 5 log entries. Identify knowledge gaps (frequently-linked concepts lacking pages, topics with quiz accuracy below 40%).
+3. **Health check:** Run `scripts/health-check.ps1 -Verbose`. Report: broken links, orphans, empty files, frontmatter errors. Fix any issues.
 
 ## Design Principles
 
-1. **Deterministic guardrails + probabilistic core**: health-check is the hard constraint. LLM generates content within those constraints.
-2. **Sandbox isolation**: raw/ is never deleted. Wiki/ is the processed output. Same pattern as sandbox branching for AI agents.
-3. **Transcript priority**: prefer verbatim transcripts over summarized descriptions. Primary source > secondary source.
-4. **API first, scrape fallback**: prefer structured data APIs (YouTube transcripts via tavily) over raw page scraping.
-5. **One idea per note**: atomic permanent notes. Structure emerges from links, not folders.
+1. **Two-step CoT**: analyze first (entities, concepts, connections, contradictions), then generate. Better precision at the cost of one extra LLM call.
+2. **Deterministic guardrails + probabilistic core**: health-check is the hard constraint. LLM generates content within those constraints.
+3. **Sandbox isolation**: raw/ is never deleted. Wiki/ is the processed output.
+4. **Transcript priority**: prefer verbatim transcripts over summarized descriptions.
+5. **Multi-source traceability**: every wiki page records all contributing source slugs in `sources: []`.
+6. **One idea per note**: atomic permanent notes. Structure emerges from links, not folders.
 
 ## Related
 
 - `scripts/compile.ps1` — deterministic change detection + file-to-prompt mapping
 - `scripts/health-check.ps1` — CI for knowledge integrity
-- `prompts/` — 8 compiler pass templates
+- `prompts/` — 9 compiler pass templates (including ingest-analysis)
 - `CLAUDE.md` — project-level Claude Code configuration

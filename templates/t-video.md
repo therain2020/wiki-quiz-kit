@@ -1,6 +1,6 @@
 ---
 type: video
-source: ""
+sources: ""
 source_url: ""
 mirror_url: ""
 transcript_url: ""

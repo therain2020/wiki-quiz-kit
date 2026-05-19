@@ -21,4 +21,4 @@ _One paragraph capturing the essential insight._
 
 ## References
 
-- Source:
+- Sources:

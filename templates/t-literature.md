@@ -1,6 +1,6 @@
 ---
 type: literature
-source: ""
+sources: ""
 source_url: ""
 author: ""
 tags: []

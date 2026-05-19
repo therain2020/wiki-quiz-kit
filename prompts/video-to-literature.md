@@ -20,7 +20,7 @@ A complete markdown file at `wiki/literature/<slug>.md`:
 ```markdown
 ---
 type: literature
-source: "<platform> @<author>"
+sources: "<platform> @<author>"
 source_url: "<original video URL>"
 mirror_url: "<mirror URL if available>"
 transcript_url: "<transcript source URL if available>"

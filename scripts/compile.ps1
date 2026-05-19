@@ -161,13 +161,18 @@ function Get-QuizDependencies {
         $content = Get-Content -Path $qf.FullName -Raw -Encoding UTF8
         if ($content -match '(?s)^---\s*\r?\n.*?\r?\n---') {
             $fmBlock = $matches[0]
-            if ($fmBlock -match 'source:\s*(\S+)') {
+            # Parse sources: field (supports both string and array format)
+            if ($fmBlock -match 'sources:\s*\[(.+?)\]') {
+                $srcList = $matches[1] -split ',\s*' | ForEach-Object { $_ -replace '["\s]', '' }
+                foreach ($src in $srcList) {
+                    if ($src -and $changedSlugs.ContainsKey($src)) {
+                        $affected += @{ QuestionFile = Get-RelativeVaultPath $qf.FullName; SourceSlug = $src }
+                    }
+                }
+            } elseif ($fmBlock -match 'sources:\s*(\S+)') {
                 $sourceSlug = $matches[1].Trim()
                 if ($changedSlugs.ContainsKey($sourceSlug)) {
-                    $affected += @{
-                        QuestionFile = Get-RelativeVaultPath $qf.FullName
-                        SourceSlug   = $sourceSlug
-                    }
+                    $affected += @{ QuestionFile = Get-RelativeVaultPath $qf.FullName; SourceSlug = $sourceSlug }
                 }
             }
         }

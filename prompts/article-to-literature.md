@@ -18,7 +18,7 @@ A complete markdown file to save at `wiki/literature/<slug>.md`:
 ```markdown
 ---
 type: literature
-source: "<publication or site name>"
+sources: "<publication or site name>"
 source_url: "<URL>"
 author: "<author name>"
 tags: [...]
