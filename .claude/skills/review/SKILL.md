@@ -37,10 +37,11 @@ Extract from user input:
   - `random` — 纯随机（和旧行为一致）
 - **Difficulty**: Default mixed, supports easy/medium/hard/mixed
 
-### Step 2: Load question index and states
+### Step 2: Load question bank and states
 
 Read `wiki/purpose.md` for review priority context (which topics matter most).
-Read `questions/INDEX.md` to enumerate available topics and question IDs.
+Read `questions/bank.json` to load all questions in a single read (no per-file I/O).
+Read `questions/INDEX.md` to enumerate available topics.
 
 Read all `state/*.json` files to build in-memory state map:
 ```json

@@ -10,7 +10,7 @@ One or more wiki notes (permanent notes, literature notes). Read the content car
 
 ## Output
 
-A JSON array of question objects. Write to `temp/draft-{slug}.json`:
+A JSON array of question objects. Write to `temp/draft-{slug}.json` and merge into `questions/bank.json`:
 
 ```json
 [
@@ -40,6 +40,7 @@ A JSON array of question objects. Write to `temp/draft-{slug}.json`:
 - **deprecated:** When regenerating questions, mark old questions (same source, same topic) with `deprecated: true` in frontmatter instead of deleting them. `/review` skips deprecated questions but old state history is preserved.
 - **sources:** Array of source note slugs that contributed. Example: `["note-slug-1", "note-slug-2"]`.
 - **Do NOT invent content** not present in the source notes. If the notes don't support a good question, skip it.
+- **bank.json merge**: After validation passes and .md files are written, read `questions/bank.json` (init `[]` if missing), append new questions, and write back. Use `questions/bank.json` as the single-file question source for `/review` to avoid per-file I/O overhead.
 
 ## Question Quality Checklist
 

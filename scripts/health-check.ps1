@@ -382,6 +382,58 @@ function Test-QuestionBank {
         }
     }
 
+    # ── bank.json consistency ──
+    $bankFile = Join-Path $qDir "bank.json"
+    if (-not (Test-Path $bankFile)) {
+        $result += @{ Type="warning"; Check="question-bank"; File="questions/bank.json"
+                       Message="bank.json does not exist. /review performance will degrade (must parse .md files). Run /ingest to regenerate." }
+    } else {
+        try {
+            $bank = Get-Content -Path $bankFile -Raw -Encoding UTF8 | ConvertFrom-Json
+            $bankIds = @{}
+            foreach ($bq in $bank) {
+                $bid = if ($bq.PSObject.Properties['id']) { $bq.id } else { $null }
+                if (-not $bid) { continue }
+                $bankIds[$bid] = $bq
+                # bank.json → .md file
+                if (-not $qIds.ContainsKey($bid)) {
+                    $result += @{ Type="error"; Check="question-bank"; File="questions/bank.json"
+                                   Message="bank.json lists '$bid' but file questions/$bid.md does not exist" }
+                }
+            }
+            # .md file → bank.json
+            foreach ($qid in $qIds.Keys) {
+                if (-not $bankIds.ContainsKey($qid)) {
+                    $result += @{ Type="warning"; Check="question-bank"; File="questions/bank.json"
+                                   Message="Question '$qid' has .md file but not in bank.json. Run /ingest to regenerate bank.json." }
+                }
+            }
+            # Content consistency: id, topic, difficulty match
+            foreach ($qid in $qIds.Keys) {
+                if (-not $bankIds.ContainsKey($qid)) { continue }
+                $bq = $bankIds[$qid]
+                $qf = $qIds[$qid]
+                $qContent = Get-Content -Path $qf.FullName -Raw -Encoding UTF8
+                $qFm = Get-Frontmatter -Content $qContent
+                $qTopic = if ($qFm.ContainsKey('topic')) { $qFm['topic'] } else { '' }
+                $qDiff = if ($qFm.ContainsKey('difficulty')) { $qFm['difficulty'] } else { '' }
+                $bTopic = if ($bq.PSObject.Properties['topic']) { $bq.topic } else { '' }
+                $bDiff = if ($bq.PSObject.Properties['difficulty']) { $bq.difficulty } else { '' }
+                if ($qTopic -ne $bTopic) {
+                    $result += @{ Type="error"; Check="question-bank"; File="questions/$qid.md"
+                                   Message="Topic mismatch: .md='$qTopic', bank.json='$bTopic'" }
+                }
+                if ($qDiff -ne $bDiff) {
+                    $result += @{ Type="error"; Check="question-bank"; File="questions/$qid.md"
+                                   Message="Difficulty mismatch: .md='$qDiff', bank.json='$bDiff'" }
+                }
+            }
+        } catch {
+            $result += @{ Type="error"; Check="question-bank"; File="questions/bank.json"
+                           Message="Cannot parse bank.json: $_" }
+        }
+    }
+
     return $result
 }
 

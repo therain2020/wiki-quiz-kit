@@ -102,7 +102,8 @@ Uses `prompts/generate-questions.md` (8th compiler pass). Structured pipeline:
    **解析:** {explanation}
    ```
 5. **Update INDEX.md** — add each new question to the appropriate topic section in `questions/INDEX.md`
-6. **Keep draft** — `temp/draft-{slug}.json` stays for traceability, user deletes when ready
+6. **Update bank.json** — read `questions/bank.json` (init `[]` if missing), append new question objects, write back atomically. `/review` reads this single file instead of parsing individual `.md` files.
+7. **Keep draft** — `temp/draft-{slug}.json` stays for traceability, user deletes when ready
 
 ### Stage 6: Update MOC
 
