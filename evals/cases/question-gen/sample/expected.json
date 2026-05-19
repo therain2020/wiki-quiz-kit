@@ -5,6 +5,6 @@
     "optionsCount": 4,
     "hasExplanation": true,
     "answerInRange": true,
-    "requiredFields": ["id", "topic", "difficulty", "source", "question", "options", "answer", "explanation"]
+    "requiredFields": ["id", "topic", "difficulty", "sources", "question", "options", "answer", "explanation"]
   }
 }

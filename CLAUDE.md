@@ -180,6 +180,19 @@ created: "YYYY-MM-DD"
 ```
 > Question state (attempts, correct, wrong, last_result, last_attempt) is stored in `state/{id}.json`, NOT in the question frontmatter. Content is immutable after creation.
 
+**Log** (`wiki/log.md`):
+```yaml
+type: log
+created: "YYYY-MM-DD"
+```
+
+**Lint report** (`wiki/lint-{date}.md`):
+```yaml
+type: lint
+date: "YYYY-MM-DD"
+issues_found: 0
+```
+
 ## Workflows Claude Should Execute
 
 ### 1. Inbox Triage

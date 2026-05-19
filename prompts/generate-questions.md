@@ -18,7 +18,7 @@ A JSON array of question objects. Write to `temp/draft-{slug}.json`:
     "id": "{topic}-{slug}-{n}",
     "topic": "FDE",
     "difficulty": "medium",
-    "source": "source-note-slug",
+    "sources": ["source-note-slug"],
     "question": "Question text?",
     "options": ["A", "B", "C", "D"],
     "answer": 0,
@@ -38,7 +38,7 @@ A JSON array of question objects. Write to `temp/draft-{slug}.json`:
 - **topic:** Use the primary topic tag from the source note. Be consistent — same topic string across questions in the same domain.
 - **id format:** `{topic}-{source-slug}-{n}` where n starts at 1 per source. Example: `fde-kpi-is-contract-growth-1`. When regenerating for an already-covered source, increment n beyond existing IDs.
 - **deprecated:** When regenerating questions, mark old questions (same source, same topic) with `deprecated: true` in frontmatter instead of deleting them. `/review` skips deprecated questions but old state history is preserved.
-- **sources:** The filename slug of the source note (without path or extension).
+- **sources:** Array of source note slugs that contributed. Example: `["note-slug-1", "note-slug-2"]`.
 - **Do NOT invent content** not present in the source notes. If the notes don't support a good question, skip it.
 
 ## Question Quality Checklist
@@ -59,7 +59,7 @@ Source note `fde-kpi-is-contract-growth-not-cost-reduction` says: "FDE strategy 
   "id": "fde-kpi-is-contract-growth-1",
   "topic": "FDE",
   "difficulty": "medium",
-  "source": "fde-kpi-is-contract-growth-not-cost-reduction",
+  "sources": ["fde-kpi-is-contract-growth-not-cost-reduction"],
   "question": "FDE 战略与 SaaS PMF 在度量逻辑上的核心区别是什么？",
   "options": [
     "FDE 追求合同规模增长，SaaS PMF 追求降低边际成本",

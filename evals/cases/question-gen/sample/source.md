@@ -15,7 +15,7 @@ type: question
 id: "{topic}-{slug}-{n}"   # 唯一标识符
 topic: ""                   # 主题标签
 difficulty: ""              # easy / medium / hard
-source: ""                  # 源笔记 slug
+sources: []                # source note slugs that contributed
 deprecated: false           # 可选，标记旧题退役
 created: "YYYY-MM-DD"
 ```

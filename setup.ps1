@@ -50,8 +50,9 @@ modified: "$(Get-Date -Format 'yyyy-MM-dd')"
 - 运行 `.\scripts\health-check.ps1 -Verbose` 检查完整性
 - 用 `/ingest <URL>` 一键摄入视频或文章，自动生成复习题
 - 用 `/review` 刷题复习，支持按主题筛选和错题回顾
+- 用 `/lint` 做 LLM 语义审计，检查矛盾、过时、缺失概念
 - 笔记模板在 `templates/` 目录
-- prompts/ 目录有 8 个 LLM 编译器 prompt，可直接使用或修改
+- prompts/ 目录有 9 个 LLM 编译器 prompt，可直接使用或修改
 
 ## Next
 - [ ] 往 raw/inbox/ 扔你的第一个想法
