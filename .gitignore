@@ -1,0 +1,32 @@
+# Obsidian workspace state (device-specific, changes constantly)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspaces.json
+
+# Plugin binaries and themes
+.obsidian/plugins/
+.obsidian/themes/
+.obsidian/snippets/
+
+# Obsidian cache
+.obsidian/cache/
+
+# Trash
+.trash/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Compile state (local only)
+scripts/.compile-state.json
+
+# Claude Code local settings (may contain personal paths/tokens)
+.claude/settings.local.json
+
+# MCP server logs (contain local paths)
+logs/
+
+# Generated quiz HTML (local only)
+output/

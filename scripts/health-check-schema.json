@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/therain2020/knowledge-base/blob/master/scripts/health-check-schema.json",
+  "title": "Knowledge Base Health Check Result",
+  "description": "Output schema for health-check.ps1 -Json. MCP-ready: this schema defines a machine-readable contract for AI agents to consume health check results.",
+  "type": "object",
+  "required": ["errors", "warnings", "notes", "details"],
+  "properties": {
+    "errors": {
+      "type": "integer",
+      "description": "Total number of ERROR-level issues (broken links, empty files, frontmatter violations)"
+    },
+    "warnings": {
+      "type": "integer",
+      "description": "Total number of WARNING-level issues (orphans, asymmetric links)"
+    },
+    "notes": {
+      "type": "integer",
+      "description": "Total number of markdown notes scanned"
+    },
+    "details": {
+      "type": "array",
+      "description": "All individual issues found during the health check",
+      "items": {
+        "type": "object",
+        "required": ["Type", "Check", "File", "Message"],
+        "properties": {
+          "Type": {
+            "type": "string",
+            "enum": ["error", "warning"],
+            "description": "Severity level"
+          },
+          "Check": {
+            "type": "string",
+            "enum": [
+              "broken-link",
+              "orphan",
+              "empty-file",
+              "frontmatter",
+              "symmetric-link",
+              "question-bank"
+            ],
+            "description": "Which of the 6 health checks raised this issue"
+          },
+          "File": {
+            "type": "string",
+            "description": "Relative path from vault root to the affected file"
+          },
+          "Target": {
+            "type": "string",
+            "description": "For broken-link: the unresolved link target. For symmetric-link: the target without backlink."
+          },
+          "Message": {
+            "type": "string",
+            "description": "Human-readable description of the issue"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "errors": 0,
+      "warnings": 0,
+      "notes": 66,
+      "details": []
+    },
+    {
+      "errors": 1,
+      "warnings": 2,
+      "notes": 66,
+      "details": [
+        {
+          "Type": "error",
+          "Check": "broken-link",
+          "File": "wiki/permanent/my-note.md",
+          "Target": "non-existent-note",
+          "Message": "Broken link: [[non-existent-note]]"
+        },
+        {
+          "Type": "warning",
+          "Check": "orphan",
+          "File": "wiki/permanent/lonely-note.md",
+          "Message": "Orphan note: no incoming links"
+        },
+        {
+          "Type": "warning",
+          "Check": "symmetric-link",
+          "File": "wiki/permanent/a.md",
+          "Target": "wiki/permanent/b.md",
+          "Message": "Links to wiki/permanent/b.md but no backlink"
+        }
+      ]
+    }
+  ]
+}

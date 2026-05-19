@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{QUIZ_TITLE}}</title>
+<style>
+  :root {
+    --paper: #FEFCF8; --ink: #1F1B17; --ink-soft: #4A4540;
+    --ink-muted: #8B857D; --ink-faint: #D4CFC8;
+    --divider: #EDE9E4; --surface: #F6F3EF;
+    --accent: #C2640D; --accent-glow: rgba(194,100,13,0.1);
+    --correct: #5C8D4A; --incorrect: #D4726A;
+    --correct-bg: rgba(92,141,74,0.06); --incorrect-bg: rgba(212,114,106,0.06);
+    --space-xs: 4px; --space-sm: 8px; --space-md: 16px;
+    --space-lg: 24px; --space-xl: 32px; --space-2xl: 48px;
+    --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 3px 8px rgba(0,0,0,0.06);
+    --font-display: "Noto Serif SC", "Source Han Serif SC", "STSong", serif;
+    --font-body: "DM Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-mono: "DM Mono", "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
+    --ease: 300ms cubic-bezier(0.4,0,0.2,1);
+  }
+  [data-theme="dark"] {
+    --paper: #1A1816; --ink: #E8E4DF; --ink-soft: #B5B0AA;
+    --ink-muted: #7A7570; --ink-faint: #45423E;
+    --divider: #2E2C29; --surface: #242220;
+    --accent: #F0A94B; --accent-glow: rgba(240,169,75,0.12);
+    --correct: #7AB862; --incorrect: #E0887E;
+    --correct-bg: rgba(122,184,98,0.08); --incorrect-bg: rgba(224,136,126,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-body); background: var(--paper); color: var(--ink);
+    line-height: 1.6; font-size: 15px; min-height: 100vh;
+    background-image: radial-gradient(ellipse at 50% 0%, var(--accent-glow) 0%, transparent 55%);
+  }
+
+  .bar {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px var(--space-lg); gap: var(--space-md);
+    background: var(--paper); border-bottom: 1px solid var(--divider);
+    backdrop-filter: blur(12px); flex-wrap: wrap;
+  }
+  .bar-title { font-family: var(--font-display); font-size: 1rem; font-weight: 600; }
+  .bar-actions { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; }
+  .btn {
+    padding: 5px 12px; border: 1px solid var(--ink-faint); background: transparent;
+    color: var(--ink-soft); border-radius: var(--radius-sm); font-size: 0.76rem;
+    cursor: pointer; font-family: var(--font-body); transition: all var(--ease);
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; }
+  .tag {
+    padding: 4px 10px; border: 1px solid var(--ink-faint);
+    border-radius: 99px; font-size: 0.7rem; cursor: pointer;
+    transition: all var(--ease); background: transparent; color: var(--ink-muted);
+    font-family: var(--font-body);
+  }
+  .tag:hover { border-color: var(--accent); color: var(--accent); }
+  .tag.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tag:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .main { max-width: 680px; margin: 0 auto; padding: var(--space-lg); }
+
+  /* Progress dots */
+  .dots { display: flex; justify-content: center; gap: 8px; margin-bottom: var(--space-xl); flex-wrap: wrap; }
+  .dot {
+    width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+    border: 2px solid var(--ink-faint); font-size: 0.68rem; font-family: var(--font-mono);
+    display: flex; align-items: center; justify-content: center; transition: all var(--ease);
+    color: var(--ink-muted); background: var(--paper);
+  }
+  .dot:hover { border-color: var(--ink-soft); }
+  .dot.ok { border-color: var(--correct); background: var(--correct-bg); color: var(--correct); font-weight: 600; }
+  .dot.bad { border-color: var(--incorrect); background: var(--incorrect-bg); color: var(--incorrect); font-weight: 600; }
+  .dot.cur { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); color: var(--accent); font-weight: 700; }
+
+  .pos { text-align: center; font-size: 0.72rem; color: var(--ink-muted); margin-bottom: var(--space-xl); font-family: var(--font-mono); }
+
+  /* Question card */
+  .qcard {
+    background: var(--paper); border: 1px solid var(--divider);
+    border-radius: var(--radius-lg); padding: var(--space-xl);
+    box-shadow: var(--shadow-card); transition: all var(--ease);
+    position: relative; overflow: hidden;
+  }
+  .qcard.done-right { border-left: 3px solid var(--correct); background: var(--correct-bg); }
+  .qcard.done-wrong { border-left: 3px solid var(--incorrect); background: var(--incorrect-bg); }
+  .qnum { font-size: 0.65rem; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-sm); }
+  .qtext { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; margin-bottom: var(--space-lg); line-height: 1.5; }
+  .qsrc { font-size: 0.65rem; color: var(--ink-muted); margin-bottom: var(--space-md); }
+
+  .opts { display: grid; gap: var(--space-sm); }
+  .opt {
+    padding: 14px var(--space-md); border: 1px solid var(--divider);
+    border-radius: var(--radius-md); cursor: pointer; transition: all var(--ease);
+    font-size: 0.88rem; display: flex; align-items: center; gap: var(--space-sm);
+    background: var(--paper);
+  }
+  .opt:hover:not(.locked) { border-color: var(--ink-faint); background: var(--surface); }
+  .opt.locked { cursor: default; }
+  .opt.pick { border-color: var(--accent); background: var(--accent-glow); }
+  .opt.right { border-color: var(--correct); background: var(--correct-bg); }
+  .opt.wrong { border-color: var(--incorrect); background: var(--incorrect-bg); animation: shake 0.4s ease; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+  .opt .letter { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-muted); min-width: 18px; }
+  .opt.right .letter { color: var(--correct); }
+  .opt.wrong .letter { color: var(--incorrect); }
+
+  .explain {
+    margin-top: var(--space-lg); padding-top: var(--space-lg);
+    border-top: 1px solid var(--divider); display: none;
+  }
+  .explain.show { display: block; }
+  .explain .verdict { font-weight: 600; font-size: 0.85rem; margin-bottom: var(--space-sm); }
+  .explain .verdict.ok { color: var(--correct); }
+  .explain .verdict.no { color: var(--incorrect); }
+  .explain p { font-size: 0.82rem; color: var(--ink-soft); line-height: 1.7; }
+  .explain .src { display: inline-block; margin-top: var(--space-sm); font-size: 0.68rem; color: var(--ink-muted); background: var(--surface); padding: 2px 8px; border-radius: 99px; }
+
+  .nav-row { display: flex; justify-content: space-between; margin-top: var(--space-lg); gap: var(--space-sm); }
+  .nav-row .btn { flex: 0 0 auto; }
+
+  /* Finish panel */
+  .finish { text-align: center; padding: var(--space-2xl) 0; }
+  .finish h2 { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: var(--space-sm); }
+  .finish .big { font-size: 3rem; font-weight: 700; font-family: var(--font-mono); }
+  .finish .big.good { color: var(--correct); }
+  .finish .big.okay { color: var(--accent); }
+  .finish .big.poor { color: var(--incorrect); }
+  .topics { display: grid; gap: var(--space-sm); max-width: 400px; margin: var(--space-lg) auto; text-align: left; }
+  .topic-row { display: flex; justify-content: space-between; align-items: center; padding: var(--space-sm) var(--space-md); background: var(--surface); border-radius: var(--radius-sm); font-size: 0.82rem; }
+  .topic-row .bar-inner { flex: 1; height: 4px; background: var(--divider); border-radius: 2px; margin: 0 var(--space-md); overflow: hidden; }
+  .topic-row .bar-fill { height: 100%; border-radius: 2px; transition: width var(--ease); }
+  .weak { margin-top: var(--space-lg); font-size: 0.82rem; color: var(--ink-muted); }
+  .weak a { color: var(--accent); }
+  .act-row { display: flex; gap: var(--space-sm); justify-content: center; margin-top: var(--space-lg); flex-wrap: wrap; }
+
+  @media (max-width: 500px) {
+    .qtext { font-size: 1rem; }
+    .bar-title { font-size: 0.85rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="bar-title">{{QUIZ_TITLE}}</div>
+  <div class="bar-actions">
+    <span style="font-size:0.68rem;color:var(--ink-muted)" id="counter">0/{{TOTAL}}</span>
+    <span id="topic-tags">{{TOPICS}}</span>
+    <button class="btn ghost" onclick="toggleTheme()">◐</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="dots" id="dots"></div>
+  <div class="pos" id="pos-label"></div>
+  <div id="card-area"></div>
+  <div class="nav-row" id="nav-row"></div>
+  <div class="finish" id="finish" style="display:none"></div>
+</div>
+
+<script>
+var Q = {{QUESTIONS_JSON}};
+var TOTAL = Q.length;
+var STORAGE = 'quiz-{{QUIZ_SLUG}}';
+var WRONG_KEY = 'quiz-wrong-bank';
+
+var state = { idx:0, answers:{}, done:false };
+
+function loadWrong(){ try{return JSON.parse(localStorage.getItem(WRONG_KEY))||[]}catch(e){return[];} }
+function saveWrong(arr){ localStorage.setItem(WRONG_KEY, JSON.stringify(arr)); }
+function loadState(){ try{return JSON.parse(localStorage.getItem(STORAGE))||state}catch(e){return state;} }
+function saveState(){ localStorage.setItem(STORAGE, JSON.stringify(state)); }
+
+function toggleTheme(){
+  var h = document.documentElement;
+  h.dataset.theme = h.dataset.theme==='dark'?'light':'dark';
+  localStorage.setItem('plan-theme', h.dataset.theme);
+}
+
+function renderDots(){
+  var h='';
+  for(var i=0;i<TOTAL;i++){
+    var cls='dot';
+    if(state.answers[i]!==undefined){
+      cls += state.answers[i]===Q[i].answer ? ' ok' : ' bad';
+    }
+    if(i===state.idx) cls+=' cur';
+    h+='<div class="'+cls+'" onclick="goTo('+i+')">'+(i+1)+'</div>';
+  }
+  document.getElementById('dots').innerHTML=h;
+  document.getElementById('pos-label').textContent='第 '+(state.idx+1)+' / '+TOTAL+' 题';
+  document.getElementById('counter').textContent=Object.keys(state.answers).length+'/'+TOTAL;
+}
+
+function renderCard(){
+  var q=Q[state.idx], ans=state.answers[state.idx];
+  var locked=ans!==undefined;
+  var card=document.getElementById('card-area');
+  var h='<div class="qcard'+(locked?(ans===q.answer?' done-right':' done-wrong'):'')+'">';
+  h+='<div class="qnum">第 '+(state.idx+1)+' 题 · '+q.topic+'</div>';
+  h+='<div class="qtext">'+q.question+'</div>';
+  h+='<div class="qsrc">来源: '+q.source+'</div>';
+  h+='<div class="opts">';
+  for(var i=0;i<q.options.length;i++){
+    var cls='opt';
+    if(locked){
+      cls+=' locked';
+      if(i===q.answer) cls+=' right';
+      if(i===ans && ans!==q.answer) cls+=' wrong';
+    } else if(ans===undefined && i===state._picking) {
+      // not locked, showing pick highlight (transient, cleared on next render)
+    }
+    h+='<div class="'+cls+'" onclick="pick('+i+')"><span class="letter">'+(i===0?'A':i===1?'B':i===2?'C':'D')+'</span>'+q.options[i]+'</div>';
+  }
+  h+='</div>';
+  if(locked){
+    h+='<div class="explain show">';
+    h+='<div class="verdict '+(ans===q.answer?'ok':'no')+'">'+(ans===q.answer?'✓ 正确':'✗ 错误')+'</div>';
+    h+='<p>'+q.explanation+'</p>';
+    h+='<span class="src">'+q.source+'</span>';
+    h+='</div>';
+  }
+  h+='</div>';
+  card.innerHTML=h;
+
+  var nav=document.getElementById('nav-row');
+  nav.innerHTML='';
+  if(state.idx>0) nav.innerHTML+='<button class="btn" onclick="prev()">← 上一题</button>';
+  else nav.innerHTML+='<span></span>';
+  if(state.idx<TOTAL-1) nav.innerHTML+='<button class="btn" onclick="next()">下一题 →</button>';
+  else if(Object.keys(state.answers).length===TOTAL) nav.innerHTML+='<button class="btn on" onclick="showFinish()">查看结果</button>';
+  else nav.innerHTML+='<span></span>';
+}
+
+function pick(i){
+  if(state.answers[state.idx]!==undefined) return;
+  state.answers[state.idx]=i;
+  var isRight = i===Q[state.idx].answer;
+  // Track wrong
+  if(!isRight){
+    var wrong=loadWrong();
+    if(wrong.indexOf(Q[state.idx].id)===-1) wrong.push(Q[state.idx].id);
+    saveWrong(wrong);
+  }
+  saveState();
+  renderDots();
+  renderCard();
+}
+
+function goTo(i){ state.idx=i; saveState(); renderDots(); renderCard(); }
+function next(){ state.idx=Math.min(state.idx+1, TOTAL-1); saveState(); renderDots(); renderCard(); }
+function prev(){ state.idx=Math.max(state.idx-1, 0); saveState(); renderDots(); renderCard(); }
+
+function showFinish(){
+  var right=0, byTopic={};
+  for(var i=0;i<TOTAL;i++){
+    if(state.answers[i]===Q[i].answer) right++;
+    var t=Q[i].topic;
+    if(!byTopic[t]) byTopic[t]={total:0,ok:0};
+    byTopic[t].total++;
+    if(state.answers[i]===Q[i].answer) byTopic[t].ok++;
+  }
+  var pct=Math.round(right/TOTAL*100);
+  var grade=pct>=80?'good':pct>=60?'okay':'poor';
+  var h='<h2>测验完成</h2>';
+  h+='<div class="big '+grade+'">'+right+'/'+TOTAL+'</div>';
+  h+='<p style="color:var(--ink-muted);font-size:0.85rem">正确率 '+pct+'%</p>';
+  h+='<div class="topics">';
+  var weaks=[];
+  for(var t in byTopic){
+    var tp=Math.round(byTopic[t].ok/byTopic[t].total*100);
+    h+='<div class="topic-row"><span>'+t+'</span><div class="bar-inner"><div class="bar-fill" style="width:'+tp+'%;background:'+(tp>=80?'var(--correct)':tp>=50?'var(--accent)':'var(--incorrect)')+'"></div></div><span>'+byTopic[t].ok+'/'+byTopic[t].total+'</span></div>';
+    if(tp<70) weaks.push(t);
+  }
+  h+='</div>';
+  if(weaks.length){
+    h+='<div class="weak">薄弱主题: '+weaks.join(', ')+'</div>';
+  }
+  h+='<div class="act-row">';
+  h+='<button class="btn on" onclick="restart()">再来一组</button>';
+  if(loadWrong().length>0) h+='<button class="btn" onclick="reviewWrong()">复习错题 ('+loadWrong().length+'道)</button>';
+  h+='</div>';
+  document.getElementById('card-area').innerHTML='';
+  document.getElementById('nav-row').innerHTML='';
+  document.getElementById('finish').style.display='block';
+  document.getElementById('finish').innerHTML=h;
+  document.getElementById('dots').innerHTML='';
+  document.getElementById('pos-label').textContent='';
+}
+
+function restart(){ localStorage.removeItem(STORAGE); location.reload(); }
+function reviewWrong(){ alert('下次说"错题复习"即可只出这 '+loadWrong().length+' 道错题。'); }
+
+(function(){
+  var t=localStorage.getItem('plan-theme');
+  if(t) document.documentElement.dataset.theme=t;
+  state=loadState();
+  // Reset state if question count changed (new quiz)
+  if(Object.keys(state.answers).length>0){
+    var oldTotal=0;
+    for(var k in state.answers){ var idx=parseInt(k); if(idx>=oldTotal) oldTotal=idx+1; }
+    if(oldTotal !== TOTAL){ state={idx:0,answers:{},done:false}; saveState(); }
+  }
+  renderDots();
+  renderCard();
+})();
+</script>
+</body>
+</html>
