@@ -56,11 +56,12 @@ def process_session(filepath):
 
     result = subprocess.run(
         [sys.executable, str(VAULT_ROOT / "scripts" / "update-state.py"), str(dest)],
-        capture_output=True, text=True
+        capture_output=True, text=True, encoding="utf-8"
     )
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {filepath.name}")
-    for line in result.stdout.strip().split('\n'):
-        print(f"  {line}")
+    if result.stdout and result.stdout.strip():
+        for line in result.stdout.strip().split('\n'):
+            print(f"  {line}")
     if result.returncode != 0:
         print(f"  ERROR:\n{result.stderr}")
     return dest

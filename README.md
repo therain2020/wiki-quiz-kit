@@ -46,7 +46,7 @@ It pulls the YouTube transcript, cleans the VTT noise, runs a two-step chain-of-
 | consolidate | attempted but accuracy below 80% |
 | (default) | random, same as `--mode random` |
 
-The HTML embeds every question matching your tag filter. Click "再来一组" and it re-rolls from that set in the browser — no LLM call, no page reload. After answering, session JSON auto-downloads. Run `python3 scripts/watch-sessions.py` in the background and your per-question stats update automatically.
+The HTML embeds every question matching your tag filter. Click "再来一组" and it re-rolls from that set in the browser — no LLM call, no page reload. After answering, session JSON auto-downloads to `~/Downloads`. `quiz-gen.py` auto-starts `watch-sessions.py` in the background, so your per-question stats update without you doing anything.
 
 **`/lint`** runs a semantic audit across your wiki. It reads `wiki/purpose.md`, samples pages by topic, and checks for contradictions, stale claims, missing concepts, orphan clusters, and duplicates. Writes a report to `wiki/lint-{date}.md`. Token cost applies — run it when you want a second pair of eyes on your notes.
 
@@ -109,7 +109,7 @@ python3 scripts/validate-draft.py temp/draft-{slug}.json --write
 
 # State management (zero LLM cost)
 python3 scripts/update-state.py sessions/session.json
-python3 scripts/watch-sessions.py                  # background auto-update
+python3 scripts/watch-sessions.py                  # auto-started by quiz-gen.py
 
 # Compile — change detection + quiz dependency scan
 python3 scripts/compile.py

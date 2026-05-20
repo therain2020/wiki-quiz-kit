@@ -206,6 +206,7 @@ var SESSION_DATE = '{{SESSION_DATE}}';
 var MODE = '{{MODE}}';
 
 var state = { idx:0, answers:{}, done:false, ids:[] };
+var sessionDownloaded = false;
 
 function loadState(){
   try{
@@ -343,6 +344,7 @@ function showFinish(){
 
 function restart(){
   downloadSession();
+  sessionDownloaded = false;
   Q = pickRandom(BANK, PICK);
   TOTAL = Q.length;
   state = { idx: 0, answers: {}, done: false, ids: [] };
@@ -354,6 +356,8 @@ function restart(){
 }
 
 function downloadSession(){
+  if (sessionDownloaded) return;
+  sessionDownloaded = true;
   var s = buildSession();
   var blob = new Blob([JSON.stringify(s, null, 2)], {type: 'application/json'});
   var a = document.createElement('a');

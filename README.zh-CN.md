@@ -46,7 +46,7 @@ bash setup.sh
 | consolidate | 正确率不到 80% |
 | （默认） | 随机，等同 `--mode random` |
 
-HTML 里嵌的是匹配你标签筛选的全部题目。点"再来一组"浏览器端重新抽——不调 LLM，不刷新页面。做完后 session JSON 自动下载。后台跑 `python3 scripts/watch-sessions.py`，答题状态自动回流，同样零 LLM 成本。
+HTML 里嵌的是匹配你标签筛选的全部题目。点"再来一组"浏览器端重新抽——不调 LLM，不刷新页面。做完后 session JSON 自动下载到 `~/Downloads`。`quiz-gen.py` 会自动启动 `watch-sessions.py` 后台进程，答题状态自动回流，无需手动操作。
 
 **`/lint`** 对整个 wiki 做语义审计。读 `wiki/purpose.md`，按主题采样笔记，检查矛盾、过时说法、缺失概念、孤立群组和重复内容。报告写入 `wiki/lint-{date}.md`。消耗 token，想深查的时候跑。
 
@@ -109,7 +109,7 @@ python3 scripts/validate-draft.py temp/draft-{slug}.json --write
 
 # 状态管理（零 LLM 成本）
 python3 scripts/update-state.py sessions/session.json
-python3 scripts/watch-sessions.py                  # 后台自动更新
+python3 scripts/watch-sessions.py                  # quiz-gen.py 自动启动
 
 # 编译——变更检测 + quiz 依赖扫描
 python3 scripts/compile.py

@@ -14,6 +14,7 @@ Usage:
 import argparse
 import json
 import random
+import subprocess
 import sys
 import webbrowser
 from datetime import datetime
@@ -179,6 +180,17 @@ def main():
 
     if not args.no_open:
         webbrowser.open(str(out_path))
+        # Auto-start background watcher to catch session download
+        watcher = VAULT_ROOT / "scripts" / "watch-sessions.py"
+        kwargs = {}
+        if sys.platform == "win32":
+            kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+        subprocess.Popen(
+            [sys.executable, str(watcher)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            **kwargs
+        )
+        print("  (watcher auto-started, stops when terminal closes)")
 
 
 if __name__ == "__main__":

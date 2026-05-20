@@ -238,7 +238,7 @@ When the user says "复习", "出题", "quiz", or "review":
    - `--mode wrong`: only `last_result = "wrong"`
    - `--mode consolidate`: accuracy < 80%
 3. Script reads bank.json, state/*.json, renders HTML, opens browser
-4. After quiz, session JSON auto-downloads. State auto-updates via `watch-sessions.py`
+4. After quiz, session JSON auto-downloads. `quiz-gen.py` auto-starts watcher → state auto-updates
 
 ### 3. Health Check (Tier 1 — deterministic)
 When the user says "health check" or "check my vault":
@@ -337,7 +337,7 @@ When the user shares a video link (Douyin, YouTube, B站, etc.), follow this pri
 | `scripts/quiz-gen.py` | Quiz HTML generator from bank.json, zero LLM cost |
 | `scripts/validate-draft.py` | Question draft structural validator + file writer |
 | `scripts/update-state.py` | Session replay → state/*.json, zero LLM cost |
-| `scripts/watch-sessions.py` | Background watcher: auto-update state on quiz session download |
+| `scripts/watch-sessions.py` | Background watcher: auto-started by quiz-gen.py, processes session JSON |
 | `.claude/skills/ingest/SKILL.md` | Knowledge ingestion pipeline (two-step CoT) |
 | `.claude/skills/review/SKILL.md` | Interactive quiz generator |
 | `.claude/skills/lint/SKILL.md` | LLM semantic wiki audit |
