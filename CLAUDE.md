@@ -66,6 +66,16 @@ python3 scripts/compile.py --json            # JSON output (includes quizAffecte
 
 python3 scripts/eval-llm.py --verbose        # validate generated questions
 python3 scripts/eval-llm.py --output path    # specify output file to check
+
+python3 scripts/validate-draft.py temp/draft-{slug}.json            # validate question draft
+python3 scripts/validate-draft.py temp/draft-{slug}.json --write    # validate + write files
+
+python3 scripts/clean.py --mode vtt --input file.vtt --output clean.txt   # clean VTT transcript
+python3 scripts/clean.py --mode web --input page.md --output clean.md     # clean scraped web page
+python3 scripts/clean.py --mode article --input article.md                # clean article text
+
+python3 scripts/youtube-transcript.py <url>                    # fetch YouTube transcript to stdout
+python3 scripts/youtube-transcript.py <url> -o file.txt        # fetch + write to file
 ```
 
 ## Folder Reference
@@ -319,9 +329,13 @@ When the user shares a video link (Douyin, YouTube, B站, etc.), follow this pri
 | `questions/bank.json` | Single-file question bank for fast `/review` loading |
 | `scripts/health-check.py` | Vault integrity auditor, cross-platform (Python 3) |
 | `scripts/compile.py` | Incremental compilation + quiz dependency, cross-platform |
+| `scripts/_windows.py` | Shared Windows encoding fix module (DRY import) |
+| `scripts/clean.py` | Data cleaner for /ingest pipeline (VTT, web, article) |
+| `scripts/youtube-transcript.py` | YouTube transcript downloader via yt-dlp |
 | `scripts/eval.py` | Deterministic eval runner, cross-platform |
 | `scripts/eval-llm.py` | LLM-driven q-gen validation, cross-platform |
 | `scripts/quiz-gen.py` | Quiz HTML generator from bank.json, zero LLM cost |
+| `scripts/validate-draft.py` | Question draft structural validator + file writer |
 | `scripts/update-state.py` | Session replay → state/*.json, zero LLM cost |
 | `scripts/watch-sessions.py` | Background watcher: auto-update state on quiz session download |
 | `.claude/skills/ingest/SKILL.md` | Knowledge ingestion pipeline (two-step CoT) |

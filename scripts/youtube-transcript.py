@@ -14,9 +14,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Import clean from sibling script
+# Import clean and encoding fix from sibling script
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _windows import fix_encoding  # noqa: E402
 from clean import clean  # noqa: E402
+
+fix_encoding()
 
 
 def list_subs(url):
@@ -132,7 +135,6 @@ def main():
         Path(args.output).write_text(result, encoding='utf-8')
         print(f"  Wrote {len(result.encode('utf-8'))}B to {args.output}", file=sys.stderr)
     else:
-        sys.stdout.reconfigure(encoding='utf-8') if hasattr(sys.stdout, 'reconfigure') else None
         sys.stdout.write(result)
 
 

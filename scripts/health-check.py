@@ -13,8 +13,14 @@ import json
 import os
 import re
 import sys
+import yaml
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _windows import fix_encoding
+
+fix_encoding()
 
 # ── Terminal colors ──────────────────────────────────────────
 CYAN = "\033[36m"; GREEN = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"
@@ -46,24 +52,12 @@ def get_markdown_files(under=None):
 
 
 def parse_frontmatter(content):
-    """Extract YAML frontmatter as dict. Simple regex-based, matching PS version."""
-    fm = {}
-    lines = content.split("\n")
-    if not lines or lines[0].strip() != "---":
-        return fm
-    for i in range(1, len(lines)):
-        line = lines[i]
-        if line.strip() == "---":
-            break
-        m = re.match(r'^(\w[\w-]*):\s*(.*)', line)
-        if m:
-            key = m.group(1)
-            val = m.group(2).strip()
-            # Strip YAML quotes
-            val = re.sub(r'^"(.+)"$', r'\1', val)
-            val = re.sub(r"^'(.+)'$", r'\1', val)
-            fm[key] = val if val else ""
-    return fm
+    """Extract YAML frontmatter as dict using yaml.safe_load."""
+    parts = content.split("---", 2)
+    if len(parts) < 3:
+        return {}
+    fm = yaml.safe_load(parts[1])
+    return fm if isinstance(fm, dict) else {}
 
 
 def get_note_body(content):
@@ -277,8 +271,10 @@ def check_question_bank():
         is_deprecated = fm.get("deprecated", "").lower() == "true"
         src_list = []
         raw_src = fm.get("sources", fm.get("source", ""))
-        if raw_src:
-            # Try array format [a, b]
+        if isinstance(raw_src, list):
+            src_list = [str(s) for s in raw_src]
+        elif raw_src:
+            # Legacy string format: single value or "[a, b]"
             m_arr = re.match(r'^\[(.+)\]$', raw_src)
             if m_arr:
                 src_list = [s.strip().strip('"').strip("'") for s in m_arr.group(1).split(",") if s.strip()]

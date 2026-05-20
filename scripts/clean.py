@@ -14,6 +14,12 @@ import argparse
 import re
 import sys
 from collections import Counter
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _windows import fix_encoding
+
+fix_encoding()
 
 # ── Blocklist: whole-line match only (no substring matching) ──
 
@@ -250,7 +256,6 @@ def main():
             f.write(result)
         print(f"clean: wrote {len(result.encode('utf-8'))}B to {args.output}", file=sys.stderr)
     else:
-        sys.stdout.reconfigure(encoding='utf-8') if hasattr(sys.stdout, 'reconfigure') else None
         sys.stdout.write(result)
 
 

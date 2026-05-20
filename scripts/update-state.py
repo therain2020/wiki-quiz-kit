@@ -14,6 +14,11 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _windows import fix_encoding
+
+fix_encoding()
+
 VAULT_ROOT = Path(__file__).resolve().parent.parent
 STATE_DIR = VAULT_ROOT / "state"
 SESSIONS_DIR = VAULT_ROOT / "sessions"

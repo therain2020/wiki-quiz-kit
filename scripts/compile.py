@@ -19,6 +19,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _windows import fix_encoding
+
+fix_encoding()
+
 CYAN = "\033[36m"; GREEN = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"
 GRAY = "\033[90m"; RESET = "\033[0m"
 def c(col, text): return f"{col}{text}{RESET}"

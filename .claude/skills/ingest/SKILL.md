@@ -78,32 +78,15 @@ For each key concept identified in the literature note, generate an atomic perma
 Uses `prompts/generate-questions.md` (8th compiler pass). Structured pipeline:
 
 1. **Generate draft** — LLM reads new wiki notes + applies `prompts/generate-questions.md`, outputs JSON to `temp/draft-{slug}.json`
-2. **Validate** — check each question in the draft:
-   - `id`, `topic`, `difficulty`, `source`, `question`, `explanation` are non-empty
-   - `options` has at least 2 items
-   - `answer` is a valid index into `options`
-3. **On validation failure** — rename draft to `temp/draft-{slug}_REJECTED.json`, report which questions failed and why
-4. **On validation pass** — for each question, write `questions/{question.id}.md`:
-   ```markdown
-   ---
-   type: question
-   id: {id}
-   topic: {topic}
-   difficulty: {difficulty}
-   sources: [{source}]
-   created: "YYYY-MM-DD"
-   ---
-   # {question}
-   A. {options[0]}
-   B. {options[1]}
-   C. {options[2]}
-   D. {options[3]}
-   **答案:** {A|B|C|D}
-   **解析:** {explanation}
-   ```
-5. **Update INDEX.md** — add each new question to the appropriate topic section in `questions/INDEX.md`
-6. **Update bank.json** — read `questions/bank.json` (init `[]` if missing), append new question objects, write back atomically. `/review` reads this single file instead of parsing individual `.md` files.
-7. **Keep draft** — `temp/draft-{slug}.json` stays for traceability, user deletes when ready
+2. **Validate + Write** — run `python3 scripts/validate-draft.py temp/draft-{slug}.json --write`. This script:
+   - Checks all required fields non-empty (`id`, `topic`, `difficulty`, `sources`, `question`, `options`, `answer`, `explanation`)
+   - Validates `options` has ≥ 2 items, `answer` is a valid index, `difficulty` is in {easy, medium, hard}
+   - Checks no duplicate IDs within draft or against existing `bank.json`
+   - Validates id format `{topic}-{source}-{n}`
+   - Verifies all source notes exist in `wiki/permanent/` or `wiki/literature/`
+   - **On failure** — renames draft to `temp/draft-{slug}_REJECTED.json`, reports all errors to stderr, exits non-zero
+   - **On pass** — writes individual `questions/{id}.md` files, updates `questions/INDEX.md`, merges into `questions/bank.json`
+3. **Keep draft** — `temp/draft-{slug}.json` stays for traceability, user deletes when ready
 
 ### Stage 6: Update MOC
 

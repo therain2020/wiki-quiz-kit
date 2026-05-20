@@ -11,7 +11,13 @@ import argparse
 import json
 import re
 import sys
+import yaml
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _windows import fix_encoding
+
+fix_encoding()
 
 CYAN = "\033[36m"; GREEN = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"
 GRAY = "\033[90m"; RESET = "\033[0m"
@@ -20,22 +26,12 @@ def c(col, text): return f"{col}{text}{RESET}"
 VAULT_ROOT = Path(__file__).resolve().parent.parent
 
 def parse_frontmatter(content):
-    fm = {}
-    lines = content.split("\n")
-    if not lines or lines[0].strip() != "---":
-        return fm
-    for i in range(1, len(lines)):
-        line = lines[i]
-        if line.strip() == "---":
-            break
-        m = re.match(r'^(\w[\w-]*):\s*(.*)', line)
-        if m:
-            key = m.group(1)
-            val = m.group(2).strip()
-            val = re.sub(r'^"(.+)"$', r'\1', val)
-            val = re.sub(r"^'(.+)'$", r'\1', val)
-            fm[key] = val if val else ""
-    return fm
+    """Extract YAML frontmatter as dict using yaml.safe_load."""
+    parts = content.split("---", 2)
+    if len(parts) < 3:
+        return {}
+    fm = yaml.safe_load(parts[1])
+    return fm if isinstance(fm, dict) else {}
 
 def extract_wikilinks(content):
     links = []

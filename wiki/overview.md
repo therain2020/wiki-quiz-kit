@@ -2,7 +2,7 @@
 type: moc
 tags: [moc, overview]
 created: "2026-05-19"
-modified: "2026-05-19"
+modified: "2026-05-20"
 ---
 # Wiki Overview
 
@@ -12,11 +12,11 @@ modified: "2026-05-19"
 
 | Metric | Count |
 |--------|-------|
-| Permanent notes | 10 |
-| Literature notes | 2 |
-| Questions | 13 |
-| Topics | 2 |
-| MOCs | 2 |
+| Permanent notes | 23 |
+| Literature notes | 3 |
+| Questions | 39 |
+| Topics | 3 |
+| MOCs | 3 |
 
 ## Topic Coverage
 
@@ -24,12 +24,14 @@ modified: "2026-05-19"
 |-------|-------|-----------|---------|
 | llm | 6 | 7 | new |
 | ontology | 5 | 6 | new |
+| fullstack | 13 | 26 | new |
 
 ## Recent Activity
 
-1. **2026-05-19** — `/ingest` Palantir Ontology Overview → 5 permanent notes + 6 questions + ontology MOC
-2. **2026-05-19** — `/ingest` What is LLM Llama Index ? → 5 permanent notes + 7 questions + llm MOC
-3. _(end of history)_
+1. **2026-05-20** — `/ingest` QuantAgent Fullstack Learning Guide → 13 permanent notes + 26 questions + fullstack MOC
+2. **2026-05-19** — `/ingest` Palantir Ontology Overview → 5 permanent notes + 6 questions + ontology MOC
+3. **2026-05-19** — `/ingest` What is LLM Llama Index ? → 5 permanent notes + 7 questions + llm MOC
+4. _(end of history)_
 
 ## Knowledge Gaps
 
@@ -40,3 +42,6 @@ modified: "2026-05-19"
 - **RAG evaluation metrics** (faithfulness, relevancy, context precision) — no note
 - **AIP (Artificial Intelligence Platform)** — Palantir's AI platform, mentioned in Ontology context, no note
 - **Ontology design patterns** — antipatterns like "ontologize → map all" referenced, no dedicated notes
+- **AuthN/AuthZ** — authentication and authorization patterns, not covered by fullstack notes
+- **WebSocket real-time communication** — mentioned as not yet implemented in QuantAgent, no note
+- **CI/CD pipeline design** — deployment automation beyond Docker Compose, not covered
